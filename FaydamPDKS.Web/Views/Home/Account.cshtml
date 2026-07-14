@@ -1,0 +1,125 @@
+@model FaydamPDKS.Web.Models.AccountViewModel
+@{
+    var en = Model.Language == "en";
+    ViewData["Title"] = en ? "My Account" : "Hesabım";
+}
+
+<div class="account-page">
+    <aside class="account-sidebar panel" aria-label="@(en ? "Account sections" : "Hesap bölümleri")">
+        <div class="account-mini-profile">
+            <span class="account-mini-avatar">@Model.Initials</span>
+            <div><strong>@Model.FullName</strong><small>@Model.Role</small></div>
+        </div>
+        <nav class="account-side-nav">
+            <a asp-action="Account" asp-route-section="personal" class="@(Model.ActiveSection == "personal" ? "active" : null)"><span aria-hidden="true">◎</span>@(en ? "Personal information" : "Kişisel bilgilerim")</a>
+            <a asp-action="Account" asp-route-section="appearance" class="@(Model.ActiveSection == "appearance" ? "active" : null)"><span aria-hidden="true">◫</span>@(en ? "Interface settings" : "Arayüz ayarlarım")</a>
+            <a asp-action="Account" asp-route-section="security" class="@(Model.ActiveSection == "security" ? "active" : null)"><span aria-hidden="true">◇</span>@(en ? "Security" : "Güvenlik")</a>
+            <a asp-action="Account" asp-route-section="notifications" class="@(Model.ActiveSection == "notifications" ? "active" : null)"><span aria-hidden="true">♧</span>@(en ? "Notifications" : "Bildirimler")<b>@Model.UnreadNotificationCount</b></a>
+            <a asp-action="Account" asp-route-section="privacy" class="@(Model.ActiveSection == "privacy" ? "active" : null)"><span aria-hidden="true">▤</span>@(en ? "My data" : "Verilerim")</a>
+        </nav>
+    </aside>
+
+    <main class="account-content">
+        @if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
+        @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+
+        @if (Model.ActiveSection == "personal")
+        {
+            <header class="account-heading"><p class="eyebrow">@(en ? "My account" : "Hesabım")</p><h1>@(en ? "Personal information" : "Kişisel bilgilerim")</h1><p>@(en ? "Review and update your own contact details." : "Kendi iletişim bilgilerinizi görüntüleyin ve güncelleyin.")</p></header>
+            <section class="account-edit-card panel">
+                <div class="account-photo-column">
+                    @if (!string.IsNullOrWhiteSpace(Model.ProfileImageUrl)) { <img class="account-photo image" src="@Model.ProfileImageUrl" alt="@(en ? "Profile photo" : "Profil fotoğrafı")" /> }
+                    else { <div class="account-photo">@Model.Initials</div> }
+                    <form asp-action="UpdateProfilePhoto" method="post" enctype="multipart/form-data" class="profile-photo-form">
+                        <label class="account-secondary-button" for="profile-photo">@(en ? "Choose photo" : "Fotoğraf seç")</label>
+                        <input id="profile-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required />
+                        <button class="action-button" type="submit">@(en ? "Upload" : "Yükle")</button>
+                    </form>
+                    <span>@(en ? "JPG, PNG or WebP · max 5 MB" : "JPG, PNG veya WebP · en fazla 5 MB")</span>
+                </div>
+                <form asp-action="UpdateProfile" method="post" class="account-form">
+                    <div class="form-field"><label for="FullName">@(en ? "Full name" : "Ad soyad")</label><input id="FullName" name="FullName" value="@Model.FullName" required maxlength="100" /></div>
+                    <div class="form-field"><label>@(en ? "Corporate email" : "Kurumsal e-posta")</label><input value="@Model.Email" readonly /></div>
+                    <div class="form-field"><label for="PhoneNumber">@(en ? "Mobile phone" : "Cep telefonu")</label><input id="PhoneNumber" name="PhoneNumber" value="@Model.PhoneNumber" autocomplete="tel" /></div>
+                    <div class="form-field"><label>@(en ? "Employee number" : "Personel numarası")</label><input value="@Model.EmployeeNumber" readonly /></div>
+                    <div class="form-field"><label>@(en ? "Department" : "Departman")</label><input value="@(Model.Department ?? (en ? "Not assigned" : "Atanmadı"))" readonly /></div>
+                    <div class="form-field"><label>@(en ? "Workplace" : "İşyeri")</label><input value="@(Model.Workplace ?? (en ? "Not assigned" : "Atanmadı"))" readonly /></div>
+                    <div class="account-form-actions"><button class="action-button" type="submit">@(en ? "Save" : "Kaydet")</button></div>
+                </form>
+            </section>
+        }
+        else if (Model.ActiveSection == "appearance")
+        {
+            <header class="account-heading"><p class="eyebrow">@(en ? "Preferences" : "Tercihler")</p><h1>@(en ? "Interface settings" : "Arayüz ayarlarım")</h1><p>@(en ? "Choose the theme and interface language." : "Tema ve arayüz dilini seçin.")</p></header>
+            <form asp-action="UpdatePreferences" method="post" class="account-preference-stack">
+                <input type="hidden" name="ReturnSection" value="appearance" />
+                <section class="account-section panel">
+                    <div class="account-section-heading"><span>01</span><div><h2>@(en ? "Theme" : "Tema")</h2><p>@(en ? "Choose the visual appearance" : "Görsel görünümü seçin")</p></div></div>
+                    <div class="theme-options">
+                        <label class="theme-card"><input type="radio" name="Theme" value="light" checked="@(Model.Theme == "light")" /><span class="theme-preview light"></span><strong>@(en ? "Light" : "Açık")</strong></label>
+                        <label class="theme-card"><input type="radio" name="Theme" value="dark" checked="@(Model.Theme == "dark")" /><span class="theme-preview dark"></span><strong>@(en ? "Light Blue" : "Açık Mavi")</strong></label>
+                    </div>
+                </section>
+                <section class="account-section panel">
+                    <div class="account-section-heading"><span>02</span><div><h2>@(en ? "Language" : "Dil seçimi")</h2><p>@(en ? "Account interface language" : "Hesap arayüzü dili")</p></div></div>
+                    <select class="account-select" name="Language"><option value="tr" selected="@(Model.Language == "tr")">Türkçe</option><option value="en" selected="@(Model.Language == "en")">English</option></select>
+                </section>
+                <input type="hidden" name="EmailNotifications" value="@Model.IsEmailNotificationEnabled.ToString().ToLowerInvariant()" />
+                <input type="hidden" name="SmsNotifications" value="@Model.IsSmsNotificationEnabled.ToString().ToLowerInvariant()" />
+                <div class="account-form-actions"><button class="action-button" type="submit">@(en ? "Save preferences" : "Tercihleri kaydet")</button></div>
+            </form>
+        }
+        else if (Model.ActiveSection == "security")
+        {
+            <header class="account-heading"><p class="eyebrow">@(en ? "Account protection" : "Hesap koruması")</p><h1>@(en ? "Security" : "Güvenlik")</h1><p>@(en ? "Manage your password and current access." : "Parolanızı ve mevcut erişiminizi yönetin.")</p></header>
+            <section class="account-section panel">
+                <div class="account-section-heading"><span>01</span><div><h2>@(en ? "Change password" : "Parola değiştir")</h2><p>@(en ? "Use at least 12 characters" : "En az 12 karakter kullanın")</p></div></div>
+                <form asp-action="ChangePassword" method="post" class="security-form">
+                    <div class="form-field"><label for="CurrentPassword">@(en ? "Current password" : "Mevcut parola")</label><input id="CurrentPassword" name="CurrentPassword" type="password" required autocomplete="current-password" /></div>
+                    <div class="form-field"><label for="NewPassword">@(en ? "New password" : "Yeni parola")</label><input id="NewPassword" name="NewPassword" type="password" required minlength="12" autocomplete="new-password" /></div>
+                    <div class="form-field"><label for="ConfirmPassword">@(en ? "Confirm password" : "Yeni parolayı doğrulayın")</label><input id="ConfirmPassword" name="ConfirmPassword" type="password" required minlength="12" autocomplete="new-password" /></div>
+                    <div class="account-form-actions"><button class="action-button" type="submit">@(en ? "Change password" : "Parolayı değiştir")</button></div>
+                </form>
+            </section>
+            <section class="account-section panel">
+                <div class="account-section-heading"><span>02</span><div><h2>@(en ? "Active session" : "Aktif oturum")</h2><p>@(en ? "The browser you are currently using" : "Şu anda kullandığınız tarayıcı")</p></div></div>
+                <div class="session-card"><span class="session-icon">▣</span><div><strong>@(en ? "Current web session" : "Mevcut web oturumu")</strong><small>@Context.Request.Headers.UserAgent.ToString()</small></div><b>@(en ? "Active" : "Aktif")</b></div>
+            </section>
+            @if (Model.IsAdmin)
+            {
+                <section class="account-section panel admin-only-card">
+                    <div class="account-section-heading"><span>03</span><div><h2>@(en ? "Physical attendance devices" : "Fiziksel PDKS cihazları")</h2><p>@(en ? "Card readers and biometric devices that send clock-in/out events" : "Kart okuyucu veya biyometrik cihazlardan giriş-çıkış kaydı almak için")</p></div></div>
+                    <p class="terminal-explanation">@(en ? "You do not need this module if attendance is collected only through the mobile application." : "Giriş-çıkışlar yalnızca mobil uygulamadan alınacaksa bu modülü kullanmanız gerekmez.")</p>
+                    <a class="account-secondary-button" asp-controller="Terminals" asp-action="Index">@(en ? "Manage terminals" : "Terminalleri yönet")</a>
+                </section>
+            }
+        }
+        else if (Model.ActiveSection == "notifications")
+        {
+            <header class="account-heading"><p class="eyebrow">@(en ? "My messages" : "Mesajlarım")</p><h1>@(en ? "Notifications" : "Bildirimler")</h1><p>@(en ? "Only notifications belonging to your account are listed." : "Yalnızca hesabınıza ait bildirimler listelenir.")</p></header>
+            <form asp-action="UpdatePreferences" method="post" class="account-section panel notification-preferences">
+                <input type="hidden" name="ReturnSection" value="notifications" />
+                <input type="hidden" name="Theme" value="@Model.Theme" /><input type="hidden" name="Language" value="@Model.Language" />
+                <label><input type="checkbox" name="EmailNotifications" value="true" checked="@Model.IsEmailNotificationEnabled" /><span><strong>@(en ? "Email" : "E-posta")</strong><small>@(en ? "Receive account notifications by email" : "Hesap bildirimlerini e-postayla alın")</small></span></label>
+                <label><input type="checkbox" name="SmsNotifications" value="true" checked="@Model.IsSmsNotificationEnabled" /><span><strong>SMS</strong><small>@(en ? "Receive urgent alerts by SMS" : "Acil uyarıları SMS ile alın")</small></span></label>
+                <div class="account-form-actions"><button class="action-button" type="submit">@(en ? "Save channels" : "Kanalları kaydet")</button></div>
+            </form>
+            <section class="notification-list panel">
+                @if (Model.Notifications.Count == 0) { <div class="panel-empty"><strong>@(en ? "No notifications" : "Bildiriminiz yok")</strong><span>@(en ? "New updates will appear here." : "Yeni güncellemeler burada görünecek.")</span></div> }
+                @foreach (var item in Model.Notifications)
+                {
+                    <article class="notification-item @(!item.IsRead ? "unread" : null)"><span></span><div><h2>@item.Title</h2><p>@item.Message</p><time>@item.CreatedAt.LocalDateTime.ToString("dd.MM.yyyy HH:mm")</time></div></article>
+                }
+            </section>
+        }
+        else
+        {
+            <header class="account-heading"><p class="eyebrow">KVKK</p><h1>@(en ? "My data" : "Kişisel verilerim")</h1><p>@(en ? "Download a machine-readable copy of the data associated with your own account." : "Yalnızca kendi hesabınızla ilişkili verilerin makine tarafından okunabilir kopyasını indirin.")</p></header>
+            <section class="account-section panel privacy-card">
+                <div class="account-section-heading"><span>01</span><div><h2>@(en ? "Personal data export" : "Kişisel veri dışa aktarımı")</h2><p>@(en ? "Profile, attendance, leave, correction and notification records" : "Profil, puantaj, izin, düzeltme ve bildirim kayıtları")</p></div></div>
+                <p>@(en ? "The export is generated only for your signed-in user identity. Password hashes and security tokens are never included." : "Dışa aktarım yalnızca oturum açmış kullanıcı kimliğiniz için oluşturulur. Parola özetleri ve güvenlik anahtarları hiçbir zaman dahil edilmez.")</p>
+                <a class="action-button" asp-action="ExportMyData">@(en ? "Download my data (JSON)" : "Verilerimi indir (JSON)")</a>
+            </section>
+        }
+    </main>
+</div>

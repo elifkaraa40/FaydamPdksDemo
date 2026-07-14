@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 using System.Net;
 using System.Net.Http.Json;
 using Xunit;
@@ -26,7 +27,9 @@ public sealed class HostSmokeTests
     [Fact]
     public async Task Api_live_endpoint_works_and_validation_uses_standard_error_contract()
     {
-        await using var factory = new WebApplicationFactory<FaydamPdksApiMarker>();
+        await using var baseFactory = new WebApplicationFactory<FaydamPdksApiMarker>();
+        await using var factory = baseFactory.WithWebHostBuilder(builder =>
+            builder.UseSetting("Jwt:Key", "test-only-key-with-at-least-32-characters"));
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
 
         var live = await client.GetAsync("/health/live");

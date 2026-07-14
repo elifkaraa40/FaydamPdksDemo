@@ -1,5 +1,9 @@
+@{
+    var uiTheme = Context.Request.Cookies["Faydam.Theme"] == "dark" ? "dark" : "light";
+    var uiLanguage = Context.Request.Cookies["Faydam.Language"] == "en" ? "en" : "tr";
+}
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="@uiLanguage" data-theme="@uiTheme">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,12 +15,14 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/FaydamPDKS.Web.styles.css" asp-append-version="true" />
 </head>
-<body>
+<body data-theme="@uiTheme">
     <a class="skip-link" href="#main-content">Ana içeriğe geç</a>
     <header class="app-header">
         <nav class="navbar navbar-expand-lg" aria-label="Ana menü">
             <div class="container-fluid px-lg-4">
-                <a class="navbar-brand brand" asp-controller="Home" asp-action="Index" aria-label="Faydam PDKS ana sayfa"><span>F</span> Faydam PDKS</a>
+                <a class="navbar-brand brand" asp-controller="Home" asp-action="Index" aria-label="Faydam PDKS ana sayfa">
+                    <img class="navbar-logo" src="~/images/faydam-navbar-logo.png" alt="Faydam PDKS" />
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -24,37 +30,57 @@
                 <div class="navbar-collapse collapse justify-content-between">
                     <ul class="navbar-nav ms-lg-4 gap-lg-2">
                         <li class="nav-item">
-                            <a class="nav-link active" asp-controller="Home" asp-action="Index">Genel Bakış</a>
+                            <a class="nav-link active" asp-controller="Home" asp-action="Index">@(uiLanguage == "en" ? "Overview" : "Genel Bakış")</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#attendance">Puantaj</a>
+                            <a class="nav-link" href="#attendance">@(uiLanguage == "en" ? "Attendance" : "Puantaj")</a>
                         </li>
                         @if (User.IsInRole("Yonetici"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="LeaveRequests" asp-action="Index">İzinler</a>
+                                <a class="nav-link" asp-controller="LeaveRequests" asp-action="Index">@(uiLanguage == "en" ? "Leave" : "İzinler")</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Employees" asp-action="Index">Personel</a>
+                                <a class="nav-link" asp-controller="Employees" asp-action="Index">@(uiLanguage == "en" ? "Employees" : "Personel")</a>
                             </li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Organization" asp-action="Index">Organizasyon</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="WorkCalendar" asp-action="Index">Takvim</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Terminals" asp-action="Index">Terminaller</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Organization" asp-action="Index">@(uiLanguage == "en" ? "Organization" : "Organizasyon")</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="WorkCalendar" asp-action="Index">@(uiLanguage == "en" ? "Calendar" : "Takvim")</a></li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Shifts" asp-action="Index">Vardiyalar</a>
+                                <a class="nav-link" asp-controller="Shifts" asp-action="Index">@(uiLanguage == "en" ? "Shifts" : "Vardiyalar")</a>
                             </li>
                         }
                         @if (User.IsInRole("Yonetici"))
                         {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Reports" asp-action="Index">Raporlar</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="AttendanceCorrections" asp-action="Index">Düzeltmeler</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Audit" asp-action="Index">Denetim</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Reports" asp-action="Index">@(uiLanguage == "en" ? "Reports" : "Raporlar")</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="AttendanceCorrections" asp-action="Index">@(uiLanguage == "en" ? "Corrections" : "Düzeltmeler")</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Audit" asp-action="Index">@(uiLanguage == "en" ? "Audit" : "Denetim")</a></li>
                         }
                     </ul>
-                    <div class="user-menu">
-                        <div class="user-copy"><strong>@User.Identity?.Name</strong><small>@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</small></div>
+                    <div class="user-menu navbar-tools">
+                        <label class="navbar-search">
+                            <span class="visually-hidden">Ara</span>
+                            <input type="search" placeholder="@(uiLanguage == "en" ? "Search" : "Ara")" aria-label="@(uiLanguage == "en" ? "Search site" : "Site içinde ara")" />
+                            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m21 21-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
+                        </label>
+                        <a class="navbar-icon-link has-indicator" asp-controller="Home" asp-action="Account" asp-route-section="notifications" aria-label="Bildirimler">
+                            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4" /></svg>
+                        </a>
+                        <a class="navbar-icon-link" asp-controller="Home" asp-action="Help" aria-label="Yardım" title="Yardım">
+                            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9.8 9a2.4 2.4 0 1 1 3.7 2c-1 .6-1.5 1.1-1.5 2.5M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                        </a>
+                        <a class="navbar-account" asp-controller="Home" asp-action="Account" aria-label="Hesabım">
+                            @if (!string.IsNullOrWhiteSpace(User.FindFirst("profile_image")?.Value))
+                            {
+                                <img class="navbar-avatar image" src="@User.FindFirst("profile_image")!.Value" alt="" />
+                            }
+                            else
+                            {
+                                <span class="navbar-avatar">@((User.Identity?.Name ?? "F").Substring(0, 1).ToUpperInvariant())</span>
+                            }
+                            <span class="navbar-account-copy"><strong>@User.Identity?.Name</strong><small>@(uiLanguage == "en" ? "My account" : "Hesabım")</small></span>
+                        </a>
                         <form asp-controller="Home" asp-action="Logout" method="post">
-                            <button class="logout-button" type="submit">Çıkış</button>
+                            <button class="logout-button" type="submit">@(uiLanguage == "en" ? "Sign out" : "Çıkış")</button>
                         </form>
                     </div>
                 </div>

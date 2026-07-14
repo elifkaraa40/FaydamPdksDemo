@@ -15,6 +15,7 @@ logs/
 tmp/
 TestResults/
 *.coverage
+FaydamPDKS.Web/wwwroot/uploads/
 
 # OS / editors
 .DS_Store
