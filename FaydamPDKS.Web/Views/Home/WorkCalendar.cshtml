@@ -1,0 +1,16 @@
+@model FaydamPDKS.Core.DTOs.WorkCalendarPageDto
+@using FaydamPDKS.Core.Enums
+@using System.Globalization
+@{ ViewData["Title"] = "Çalışma Takvimi"; }
+<section class="hero compact-hero"><div><p class="eyebrow">Puantaj kuralları</p><h1>Çalışma takvimi</h1><p>Resmi tatilleri ve hafta sonundaki özel çalışma günlerini tüm şirket veya işyeri bazında tanımlayın.</p></div><span class="summary-pill">@Model.Days.Count özel gün</span></section>
+@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+<div class="content-grid shift-grid">
+    <section class="panel" aria-labelledby="calendar-title"><div class="panel-heading"><div><p class="eyebrow">Özel günler</p><h2 id="calendar-title">Takvim kayıtları</h2></div></div>
+        @if (Model.Days.Count == 0) { <div class="panel-empty"><strong>Özel gün tanımlanmamış.</strong><p>Cumartesi ve pazar varsayılan olarak hafta tatilidir.</p></div> }
+        else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Tarih</th><th>Gün</th><th>Kapsam</th><th>Tür</th></tr></thead><tbody>@foreach (var item in Model.Days) { <tr><td><strong>@item.Date.ToString("dd.MM.yyyy")</strong><small>@item.Date.ToString("dddd", new CultureInfo("tr-TR"))</small></td><td>@item.Name</td><td>@item.ScopeName</td><td><span class="status @(item.DayType == CalendarDayType.Holiday ? "danger" : "success")">@(item.DayType == CalendarDayType.Holiday ? "Tatil" : "Çalışma günü")</span></td></tr> }</tbody></table></div> }
+    </section>
+    <aside class="panel create-panel" aria-labelledby="create-calendar-title"><div class="panel-heading"><div><p class="eyebrow">Yeni kural</p><h2 id="create-calendar-title">Özel gün ekle</h2></div></div><form asp-action="Create" method="post" class="admin-form">
+        <div class="form-field"><label for="Date">Tarih</label><input id="Date" name="Date" type="date" required /></div><div class="form-field"><label for="Name">Gün adı / açıklama</label><input id="Name" name="Name" maxlength="150" required placeholder="Örn. Cumhuriyet Bayramı" /></div><div class="form-field"><label for="DayType">Gün tipi</label><select id="DayType" name="DayType" required><option value="Holiday">Tatil / çalışma dışı</option><option value="WorkingDayOverride">Özel çalışma günü</option></select></div><div class="form-field"><label for="WorkplaceId">Kapsam</label><select id="WorkplaceId" name="WorkplaceId"><option value="">Tüm işyerleri</option>@foreach (var workplace in Model.Workplaces) { <option value="@workplace.Id">@workplace.Code · @workplace.Name</option> }</select><small>İşyeri kaydı, aynı tarihteki genel kuraldan önceliklidir.</small></div><button class="btn btn-primary w-100" type="submit">Takvime ekle</button>
+    </form></aside>
+</div>

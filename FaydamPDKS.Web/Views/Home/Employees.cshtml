@@ -1,0 +1,58 @@
+@model FaydamPDKS.Core.DTOs.EmployeeAdminPageDto
+@{
+    ViewData["Title"] = "Personel Yönetimi";
+}
+<section class="hero compact-hero">
+    <div><p class="eyebrow">Organizasyon</p><h1>Personel yönetimi</h1><p>Personel hesaplarını, rollerini ve çalışma bilgilerini yönetin.</p></div>
+    <span class="summary-pill">@Model.Employees.Count personel</span>
+</section>
+
+@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
+<div class="admin-grid">
+    <section class="panel" aria-labelledby="employee-list-title">
+        <div class="panel-heading"><div><p class="eyebrow">Kayıtlar</p><h2 id="employee-list-title">Personel listesi</h2></div></div>
+        @if (Model.Employees.Count == 0)
+        {
+            <div class="panel-empty"><strong>Henüz personel bulunmuyor.</strong><p>İlk personeli sağdaki formdan oluşturun.</p></div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Personel</th><th>Bölüm</th><th>Rol</th><th>Durum</th><th class="text-end">İşlem</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in Model.Employees)
+                    {
+                        <tr>
+                            <td><strong>@item.FullName</strong><small>@item.EmployeeNumber · @item.Email</small></td>
+                            <td>@(item.Department ?? "—")<small>@(item.Workplace ?? "İşyeri belirtilmemiş") · @(item.HireDate?.ToString("dd.MM.yyyy") ?? "İşe giriş yok")</small></td>
+                            <td>@item.Role</td>
+                            <td><span class="status @(item.IsActive ? "success" : "neutral")">@(item.IsActive ? "Aktif" : "Pasif")</span></td>
+                            <td class="text-end"><div class="review-actions">
+                                <a class="btn btn-sm btn-light" asp-action="Edit" asp-route-id="@item.Id">Düzenle</a>
+                                <form asp-action="SetActive" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="active" value="@(!item.IsActive ? "true" : "false")" /><button class="btn btn-sm @(item.IsActive ? "btn-outline-danger" : "btn-outline-success")" type="submit">@(item.IsActive ? "Pasife al" : "Aktifleştir")</button></form>
+                            </div></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <aside class="panel create-panel" aria-labelledby="create-employee-title">
+        <div class="panel-heading"><div><p class="eyebrow">Yeni kayıt</p><h2 id="create-employee-title">Personel ekle</h2></div></div>
+        <form asp-action="Create" method="post" class="admin-form">
+            <div class="form-field"><label for="EmployeeNumber">Sicil numarası</label><input id="EmployeeNumber" name="EmployeeNumber" required maxlength="40" autocomplete="off" /></div>
+            <div class="form-field"><label for="FullName">Ad soyad</label><input id="FullName" name="FullName" required maxlength="100" autocomplete="name" /></div>
+            <div class="form-field"><label for="Email">Kurumsal e-posta</label><input id="Email" name="Email" type="email" required maxlength="100" autocomplete="email" /></div>
+            <div class="form-field"><label for="DepartmentId">İşyeri / bölüm</label><select id="DepartmentId" name="DepartmentId"><option value="">Bölüm seçilmedi</option>@foreach (var department in Model.Departments) { <option value="@department.Id">@department.WorkplaceName · @department.DepartmentName</option> }</select></div>
+            <div class="form-field"><label for="HireDate">İşe giriş tarihi</label><input id="HireDate" name="HireDate" type="date" /></div>
+            <div class="form-field"><label for="RoleId">Rol</label><select id="RoleId" name="RoleId" required><option value="">Rol seçin</option>@foreach (var role in Model.Roles) { <option value="@role.Id">@role.Name</option> }</select></div>
+            <div class="form-field"><label for="TemporaryPassword">Geçici parola</label><input id="TemporaryPassword" name="TemporaryPassword" type="password" required minlength="12" autocomplete="new-password" /><small>En az 12 karakter. Güvenli kanaldan personele iletin.</small></div>
+            <button class="btn btn-primary w-100" type="submit">Personel oluştur</button>
+        </form>
+    </aside>
+</div>

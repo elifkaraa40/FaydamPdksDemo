@@ -1,0 +1,19 @@
+@ApiHost = http://localhost:5055
+
+### Canlilik kontrolu
+GET {{ApiHost}}/health/live
+Accept: application/json
+
+### Veritabani hazirlik kontrolu
+GET {{ApiHost}}/health/ready
+Accept: application/json
+
+### Mobil oturum acma
+POST {{ApiHost}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "personel@faydam.com",
+  "password": "Personel123!"
+}
+

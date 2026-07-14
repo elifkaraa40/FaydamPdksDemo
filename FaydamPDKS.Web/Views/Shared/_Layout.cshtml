@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Faydam PDKS personel devam, vardiya ve izin yönetim sistemi." />
+    <meta name="theme-color" content="#0f172a" />
+    <title>@ViewData["Title"] | Faydam PDKS</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/FaydamPDKS.Web.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Ana içeriğe geç</a>
+    <header class="app-header">
+        <nav class="navbar navbar-expand-lg" aria-label="Ana menü">
+            <div class="container-fluid px-lg-4">
+                <a class="navbar-brand brand" asp-controller="Home" asp-action="Index" aria-label="Faydam PDKS ana sayfa"><span>F</span> Faydam PDKS</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse justify-content-between">
+                    <ul class="navbar-nav ms-lg-4 gap-lg-2">
+                        <li class="nav-item">
+                            <a class="nav-link active" asp-controller="Home" asp-action="Index">Genel Bakış</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#attendance">Puantaj</a>
+                        </li>
+                        @if (User.IsInRole("Yonetici"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="LeaveRequests" asp-action="Index">İzinler</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Employees" asp-action="Index">Personel</a>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Organization" asp-action="Index">Organizasyon</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="WorkCalendar" asp-action="Index">Takvim</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Terminals" asp-action="Index">Terminaller</a></li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Shifts" asp-action="Index">Vardiyalar</a>
+                            </li>
+                        }
+                        @if (User.IsInRole("Yonetici"))
+                        {
+                            <li class="nav-item"><a class="nav-link" asp-controller="Reports" asp-action="Index">Raporlar</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="AttendanceCorrections" asp-action="Index">Düzeltmeler</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Audit" asp-action="Index">Denetim</a></li>
+                        }
+                    </ul>
+                    <div class="user-menu">
+                        <div class="user-copy"><strong>@User.Identity?.Name</strong><small>@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</small></div>
+                        <form asp-controller="Home" asp-action="Logout" method="post">
+                            <button class="logout-button" type="submit">Çıkış</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container-fluid app-shell px-lg-4">
+        <main id="main-content" role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="app-footer">
+        <div class="container-fluid px-lg-4">
+            &copy; 2026 Faydam PDKS · Güvenli ve izlenebilir iş gücü yönetimi
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

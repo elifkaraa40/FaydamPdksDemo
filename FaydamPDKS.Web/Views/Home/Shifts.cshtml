@@ -1,0 +1,59 @@
+@model FaydamPDKS.Core.DTOs.ShiftAdminPageDto
+@{
+    ViewData["Title"] = "Vardiya Yönetimi";
+}
+<section class="hero compact-hero">
+    <div><p class="eyebrow">Çalışma takvimi</p><h1>Vardiya yönetimi</h1><p>Gündüz ve gece vardiyalarını tanımlayın, geçerlilik tarihleriyle personele atayın.</p></div>
+    <span class="summary-pill">@Model.Shifts.Count vardiya</span>
+</section>
+
+@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
+<div class="content-grid shift-grid">
+    <section class="panel" aria-labelledby="shift-list-title">
+        <div class="panel-heading"><div><p class="eyebrow">Şablonlar</p><h2 id="shift-list-title">Tanımlı vardiyalar</h2></div></div>
+        @if (Model.Shifts.Count == 0) { <div class="panel-empty"><strong>Vardiya bulunmuyor.</strong></div> }
+        else
+        {
+            <div class="table-responsive"><table class="table align-middle">
+                <thead><tr><th>Vardiya</th><th>Saatler</th><th>Mola</th><th>Tolerans</th><th>Durum</th></tr></thead>
+                <tbody>@foreach (var item in Model.Shifts) { <tr>
+                    <td><strong>@item.Name</strong></td>
+                    <td>@item.StartsAt.ToString("HH:mm") – @item.EndsAt.ToString("HH:mm")<small>@(item.EndsAt <= item.StartsAt ? "Gece vardiyası" : "Gündüz vardiyası")</small></td>
+                    <td>@item.BreakMinutes dk</td><td>Geç @item.LateToleranceMinutes dk<small>Erken çıkış @item.EarlyLeaveToleranceMinutes dk</small></td>
+                    <td><span class="status @(item.IsActive ? "success" : "neutral")">@(item.IsActive ? "Aktif" : "Pasif")</span></td>
+                </tr> }</tbody>
+            </table></div>
+        }
+    </section>
+    <aside class="panel create-panel" aria-labelledby="create-shift-title">
+        <div class="panel-heading"><div><p class="eyebrow">Yeni şablon</p><h2 id="create-shift-title">Vardiya oluştur</h2></div></div>
+        <form asp-action="Create" method="post" class="admin-form">
+            <div class="form-field"><label for="Name">Vardiya adı</label><input id="Name" name="Name" required maxlength="100" /></div>
+            <div class="form-row"><div class="form-field"><label for="StartsAt">Başlangıç</label><input id="StartsAt" name="StartsAt" type="time" required /></div><div class="form-field"><label for="EndsAt">Bitiş</label><input id="EndsAt" name="EndsAt" type="time" required /></div></div>
+            <div class="form-field"><label for="BreakMinutes">Mola (dakika)</label><input id="BreakMinutes" name="BreakMinutes" type="number" value="60" min="0" max="720" required /></div>
+            <div class="form-row"><div class="form-field"><label for="LateToleranceMinutes">Geç toleransı</label><input id="LateToleranceMinutes" name="LateToleranceMinutes" type="number" value="5" min="0" max="240" required /></div><div class="form-field"><label for="EarlyLeaveToleranceMinutes">Erken çıkış toleransı</label><input id="EarlyLeaveToleranceMinutes" name="EarlyLeaveToleranceMinutes" type="number" value="5" min="0" max="240" required /></div></div>
+            <button class="btn btn-primary w-100" type="submit">Vardiya oluştur</button>
+        </form>
+    </aside>
+</div>
+
+<div class="content-grid shift-grid mt-4">
+    <section class="panel" aria-labelledby="assignment-list-title">
+        <div class="panel-heading"><div><p class="eyebrow">Takvim</p><h2 id="assignment-list-title">Personel atamaları</h2></div></div>
+        @if (Model.Assignments.Count == 0) { <div class="panel-empty"><strong>Henüz vardiya ataması yok.</strong></div> }
+        else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Personel</th><th>Vardiya</th><th>Başlangıç</th><th>Bitiş</th></tr></thead><tbody>
+            @foreach (var item in Model.Assignments) { <tr><td><strong>@item.EmployeeName</strong><small>@item.EmployeeNumber</small></td><td>@item.ShiftName</td><td>@item.ValidFrom.ToString("dd.MM.yyyy")</td><td>@(item.ValidTo?.ToString("dd.MM.yyyy") ?? "Süresiz")</td></tr> }
+        </tbody></table></div> }
+    </section>
+    <aside class="panel create-panel" aria-labelledby="assign-shift-title">
+        <div class="panel-heading"><div><p class="eyebrow">Yeni atama</p><h2 id="assign-shift-title">Personele vardiya ata</h2></div></div>
+        <form asp-action="Assign" method="post" class="admin-form">
+            <div class="form-field"><label for="EmployeeId">Personel</label><select id="EmployeeId" name="EmployeeId" required><option value="">Personel seçin</option>@foreach (var employee in Model.Employees) { <option value="@employee.Id">@employee.EmployeeNumber · @employee.FullName</option> }</select></div>
+            <div class="form-field"><label for="ShiftId">Vardiya</label><select id="ShiftId" name="ShiftId" required><option value="">Vardiya seçin</option>@foreach (var shift in Model.Shifts.Where(x => x.IsActive)) { <option value="@shift.Id">@shift.Name (@shift.StartsAt.ToString("HH:mm")–@shift.EndsAt.ToString("HH:mm"))</option> }</select></div>
+            <div class="form-row"><div class="form-field"><label for="ValidFrom">Başlangıç tarihi</label><input id="ValidFrom" name="ValidFrom" type="date" required /></div><div class="form-field"><label for="ValidTo">Bitiş tarihi</label><input id="ValidTo" name="ValidTo" type="date" /><small>Boş bırakılırsa süresizdir.</small></div></div>
+            <button class="btn btn-primary w-100" type="submit">Vardiya ata</button>
+        </form>
+    </aside>
+</div>

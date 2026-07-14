@@ -1,0 +1,23 @@
+# .NET / Visual Studio
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Local secrets and environment
+.env
+appsettings.Local.json
+secrets.json
+
+# Runtime and generated temporary files
+logs/
+tmp/
+TestResults/
+*.coverage
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

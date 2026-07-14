@@ -1,0 +1,51 @@
+@using FaydamPDKS.Core.Enums
+@model IReadOnlyList<FaydamPDKS.Core.DTOs.LeaveReviewListItemDto>
+@{
+    ViewData["Title"] = "İzin Talepleri";
+    var pendingCount = Model.Count(x => x.Status == LeaveRequestStatus.Pending);
+}
+<section class="hero compact-hero">
+    <div><p class="eyebrow">İnsan kaynakları</p><h1>İzin talepleri</h1><p>Personel taleplerini inceleyin ve kararları kayıt altına alın.</p></div>
+    <span class="summary-pill">@pendingCount bekleyen talep</span>
+</section>
+
+@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
+<section class="panel" aria-labelledby="leave-table-title">
+    <div class="panel-heading"><div><p class="eyebrow">Tüm kayıtlar</p><h2 id="leave-table-title">Talep listesi</h2></div></div>
+    @if (Model.Count == 0)
+    {
+        <div class="panel-empty"><strong>Henüz izin talebi yok.</strong><p>Mobil uygulamadan gönderilen talepler burada görünecek.</p></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead><tr><th>Personel</th><th>İzin</th><th>Tarih</th><th>Durum</th><th class="text-end">İşlem</th></tr></thead>
+                <tbody>
+                @foreach (var item in Model)
+                {
+                    var statusClass = item.Status switch { LeaveRequestStatus.Approved => "success", LeaveRequestStatus.Rejected => "danger", LeaveRequestStatus.Cancelled => "neutral", _ => "warning" };
+                    <tr>
+                        <td><strong>@item.EmployeeName</strong><small>@item.Reason</small></td>
+                        <td>@item.LeaveType <small>@item.CalendarDayCount takvim günü</small></td>
+                        <td>@item.StartDate.ToString("dd.MM.yyyy")<small>@item.EndDate.ToString("dd.MM.yyyy") tarihine kadar</small></td>
+                        <td><span class="status @statusClass">@item.Status</span></td>
+                        <td class="text-end">
+                        @if (item.Status == LeaveRequestStatus.Pending)
+                        {
+                            <div class="review-actions">
+                                <form asp-action="Review" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="Approve" value="true" /><button class="btn btn-sm btn-success" type="submit">Onayla</button></form>
+                                <form asp-action="Review" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="Approve" value="false" /><button class="btn btn-sm btn-outline-danger" type="submit">Reddet</button></form>
+                            </div>
+                        }
+                        else { <small>@item.ReviewNote</small> }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

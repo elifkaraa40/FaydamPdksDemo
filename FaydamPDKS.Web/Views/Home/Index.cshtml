@@ -1,0 +1,68 @@
+@model FaydamPDKS.Core.DTOs.DashboardDto
+@{
+    ViewData["Title"] = "Genel Bakış";
+    var culture = new System.Globalization.CultureInfo("tr-TR");
+}
+
+<section class="hero" aria-labelledby="page-title">
+    <div>
+        <p class="eyebrow">@Model.WorkDate.ToDateTime(TimeOnly.MinValue).ToString("dd MMMM yyyy · dddd", culture)</p>
+        <h1 id="page-title">Günaydın, @User.Identity?.Name</h1>
+        <p>Ekibinizin bugünkü çalışma durumunu tek ekrandan izleyin.</p>
+    </div>
+    <a class="btn btn-primary action-button" asp-controller="LeaveRequests" asp-action="Index">İzinleri yönet</a>
+</section>
+
+<section class="metric-grid" aria-label="Günlük özet">
+    <article class="metric-card"><span class="metric-icon success">✓</span><div><p>İş yerinde</p><strong>@Model.PresentCount</strong><small>Toplam @Model.TotalPersonnel personel</small></div></article>
+    <article class="metric-card"><span class="metric-icon warning">↗</span><div><p>Geç başlayan</p><strong>@Model.LateCount</strong><small>Bugünkü ilk girişlere göre</small></div></article>
+    <article class="metric-card"><span class="metric-icon info">◷</span><div><p>İzinli</p><strong>@Model.OnLeaveCount</strong><small>Onaylanmış izinler</small></div></article>
+    <article class="metric-card"><span class="metric-icon danger">!</span><div><p>Giriş kaydı yok</p><strong>@Model.MissingRecordCount</strong><small>İzinli olmayan personel</small></div></article>
+</section>
+
+<div class="content-grid">
+    <section class="panel" id="attendance" aria-labelledby="attendance-title">
+        <div class="panel-heading"><div><p class="eyebrow">Canlı görünüm</p><h2 id="attendance-title">Son hareketler</h2></div></div>
+        @if (Model.RecentMovements.Count == 0)
+        {
+            <div class="panel-empty"><strong>Bugün henüz hareket yok.</strong><p>Terminal veya mobil uygulamadan gelen kayıtlar burada görünecek.</p></div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle"><thead><tr><th>Personel</th><th>İşlem</th><th>Bölge</th><th class="text-end">Zaman</th></tr></thead>
+                <tbody>
+                @foreach (var movement in Model.RecentMovements)
+                {
+                    var isEntry = movement.EventType.Equals("Giris", StringComparison.OrdinalIgnoreCase);
+                    <tr>
+                        <td><strong>@movement.EmployeeName</strong><small>@movement.EmployeeCode</small></td>
+                        <td><span class="status @(isEntry ? "success" : "neutral")">@(isEntry ? "Giriş" : "Çıkış")</span></td>
+                        <td>@movement.ZoneName</td>
+                        <td class="text-end">@movement.OccurredAt.ToString("HH:mm")<small>@movement.OccurredAt.ToString("dd MMM", culture)</small></td>
+                    </tr>
+                }
+                </tbody></table>
+            </div>
+        }
+    </section>
+
+    <aside class="panel" id="requests" aria-labelledby="requests-title">
+        <div class="panel-heading"><div><p class="eyebrow">İş listeniz</p><h2 id="requests-title">Onay bekleyenler</h2></div><span class="count">@Model.PendingLeaveCount</span></div>
+        @if (Model.PendingLeaves.Count == 0)
+        {
+            <div class="panel-empty"><strong>Bekleyen talep yok.</strong><p>Tüm izin talepleri sonuçlandırılmış.</p></div>
+        }
+        else
+        {
+            <ul class="request-list">
+            @foreach (var leave in Model.PendingLeaves)
+            {
+                var initials = string.Concat(leave.EmployeeName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0]));
+                <li><span class="avatar">@initials</span><div><strong>@leave.EmployeeName</strong><small>@leave.LeaveType izni</small></div><time datetime="@leave.StartDate.ToString("yyyy-MM-dd")">@leave.StartDate.ToString("dd MMM", culture)</time></li>
+            }
+            </ul>
+        }
+        <a class="btn btn-light w-100" asp-controller="LeaveRequests" asp-action="Index">Talepleri incele</a>
+    </aside>
+</div>

@@ -1,0 +1,21 @@
+@model FaydamPDKS.Core.DTOs.OrganizationPageDto
+@{ ViewData["Title"] = "Organizasyon Yönetimi"; }
+<section class="hero compact-hero"><div><p class="eyebrow">Organizasyon</p><h1>İşyeri ve bölümler</h1><p>Personel, rapor ve yetki kapsamlarında kullanılacak kurumsal yapıyı yönetin.</p></div><span class="summary-pill">@Model.Workplaces.Count işyeri · @Model.Departments.Count bölüm</span></section>
+@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+<div class="content-grid shift-grid">
+    <section class="panel" aria-labelledby="workplaces-title"><div class="panel-heading"><div><p class="eyebrow">Lokasyonlar</p><h2 id="workplaces-title">İşyerleri</h2></div></div>
+        @if (Model.Workplaces.Count == 0) { <div class="panel-empty"><strong>Henüz işyeri yok.</strong></div> } else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Kod / işyeri</th><th>Saat dilimi</th><th>Bölüm</th><th>Durum</th></tr></thead><tbody>@foreach (var item in Model.Workplaces) { <tr><td><strong>@item.Name</strong><small>@item.Code · @(item.Address ?? "Adres belirtilmedi")</small></td><td>@item.TimeZoneId</td><td>@item.DepartmentCount</td><td><span class="status @(item.IsActive ? "success" : "neutral")">@(item.IsActive ? "Aktif" : "Pasif")</span></td></tr> }</tbody></table></div> }
+    </section>
+    <aside class="panel create-panel" aria-labelledby="create-workplace-title"><div class="panel-heading"><div><p class="eyebrow">Yeni lokasyon</p><h2 id="create-workplace-title">İşyeri oluştur</h2></div></div><form asp-action="CreateWorkplace" method="post" class="admin-form">
+        <div class="form-field"><label for="WorkplaceCode">İşyeri kodu</label><input id="WorkplaceCode" name="Code" required maxlength="30" /></div><div class="form-field"><label for="WorkplaceName">İşyeri adı</label><input id="WorkplaceName" name="Name" required maxlength="120" /></div><div class="form-field"><label for="TimeZoneId">Saat dilimi</label><input id="TimeZoneId" name="TimeZoneId" value="Europe/Istanbul" required maxlength="100" /><small>IANA saat dilimi kimliği kullanın.</small></div><div class="form-field"><label for="Address">Adres</label><input id="Address" name="Address" maxlength="250" /></div><button class="btn btn-primary w-100" type="submit">İşyeri oluştur</button>
+    </form></aside>
+</div>
+<div class="content-grid shift-grid mt-4">
+    <section class="panel" aria-labelledby="departments-title"><div class="panel-heading"><div><p class="eyebrow">Birimler</p><h2 id="departments-title">Bölümler</h2></div></div>
+        @if (Model.Departments.Count == 0) { <div class="panel-empty"><strong>Henüz bölüm yok.</strong></div> } else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Kod</th><th>Bölüm</th><th>İşyeri</th><th>Durum</th></tr></thead><tbody>@foreach (var item in Model.Departments) { <tr><td>@item.Code</td><td><strong>@item.Name</strong></td><td>@item.WorkplaceName</td><td><span class="status @(item.IsActive ? "success" : "neutral")">@(item.IsActive ? "Aktif" : "Pasif")</span></td></tr> }</tbody></table></div> }
+    </section>
+    <aside class="panel create-panel" aria-labelledby="create-department-title"><div class="panel-heading"><div><p class="eyebrow">Yeni birim</p><h2 id="create-department-title">Bölüm oluştur</h2></div></div><form asp-action="CreateDepartment" method="post" class="admin-form">
+        <div class="form-field"><label for="WorkplaceId">İşyeri</label><select id="WorkplaceId" name="WorkplaceId" required><option value="">İşyeri seçin</option>@foreach (var workplace in Model.Workplaces.Where(x => x.IsActive)) { <option value="@workplace.Id">@workplace.Code · @workplace.Name</option> }</select></div><div class="form-field"><label for="DepartmentCode">Bölüm kodu</label><input id="DepartmentCode" name="Code" required maxlength="30" /></div><div class="form-field"><label for="DepartmentName">Bölüm adı</label><input id="DepartmentName" name="Name" required maxlength="120" /></div><button class="btn btn-primary w-100" type="submit">Bölüm oluştur</button>
+    </form></aside>
+</div>

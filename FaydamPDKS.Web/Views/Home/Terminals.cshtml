@@ -1,0 +1,17 @@
+@model FaydamPDKS.Core.DTOs.TerminalPageDto
+@{ ViewData["Title"] = "Terminal Sağlığı"; }
+<section class="hero compact-hero"><div><p class="eyebrow">Cihaz yönetimi</p><h1>Terminal sağlığı</h1><p>Okuyucuların son görülme, firmware, çevrimdışı kuyruk ve hata durumlarını izleyin.</p></div><span class="summary-pill">@Model.Terminals.Count(x => x.IsOnline) / @Model.Terminals.Count çevrimiçi</span></section>
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (ViewBag.NewTerminalApiKey is string newKey)
+{
+    <div class="alert alert-warning terminal-secret" role="alert"><strong>@(ViewBag.KeyRotated == true ? "Terminal anahtarı yenilendi." : "Terminal anahtarını şimdi güvenli biçimde kaydedin.")</strong><p>Bu değer tekrar gösterilmeyecektir. Eski anahtar artık geçersizdir; kaynak koda veya loglara yazmayın.</p><dl><dt>Terminal ID</dt><dd><code>@ViewBag.NewTerminalId</code></dd><dt>X-Terminal-Key</dt><dd><code>@newKey</code></dd></dl></div>
+}
+<div class="content-grid shift-grid">
+    <section class="panel" aria-labelledby="terminal-list-title"><div class="panel-heading"><div><p class="eyebrow">Cihazlar</p><h2 id="terminal-list-title">Kayıtlı terminaller</h2></div></div>
+        @if (Model.Terminals.Count == 0) { <div class="panel-empty"><strong>Terminal kayıtlı değil.</strong></div> }
+        else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Terminal</th><th>İşyeri</th><th>Son görülme</th><th>Firmware / kuyruk</th><th>Sağlık / işlem</th></tr></thead><tbody>@foreach (var item in Model.Terminals) { <tr><td><strong>@item.Name</strong><small>@item.SerialNumber</small></td><td>@item.WorkplaceName</td><td>@(item.LastSeenAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") ?? "Henüz bağlanmadı")</td><td>@(item.FirmwareVersion ?? "Bilinmiyor")<small>@item.PendingEventCount bekleyen olay</small></td><td><span class="status @(item.IsOnline ? "success" : "danger")">@(item.IsOnline ? "Çevrimiçi" : "Çevrimdışı")</span>@if (!string.IsNullOrWhiteSpace(item.LastError)) { <small class="text-danger">@item.LastError</small> }<form asp-action="RotateKey" method="post" class="mt-2"><input type="hidden" name="id" value="@item.Id" /><button class="btn btn-sm btn-outline-secondary" type="submit">Anahtarı yenile</button></form></td></tr> }</tbody></table></div> }
+    </section>
+    <aside class="panel create-panel" aria-labelledby="register-terminal-title"><div class="panel-heading"><div><p class="eyebrow">Yeni cihaz</p><h2 id="register-terminal-title">Terminal kaydet</h2></div></div><form asp-action="Register" method="post" class="admin-form">
+        <div class="form-field"><label for="WorkplaceId">İşyeri</label><select id="WorkplaceId" name="WorkplaceId" required><option value="">İşyeri seçin</option>@foreach (var workplace in Model.Workplaces) { <option value="@workplace.Id">@workplace.Code · @workplace.Name</option> }</select></div><div class="form-field"><label for="Name">Terminal adı</label><input id="Name" name="Name" maxlength="100" required placeholder="Ana giriş turnikesi" /></div><div class="form-field"><label for="SerialNumber">Seri numarası</label><input id="SerialNumber" name="SerialNumber" maxlength="100" required autocomplete="off" /></div><button class="btn btn-primary w-100" type="submit">Terminal kaydet</button>
+    </form></aside>
+</div>

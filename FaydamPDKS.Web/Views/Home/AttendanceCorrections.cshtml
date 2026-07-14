@@ -1,0 +1,19 @@
+@model IReadOnlyList<FaydamPDKS.Core.DTOs.AttendanceCorrectionReviewDto>
+@using FaydamPDKS.Core.Enums
+@{
+    ViewData["Title"] = "Puantaj Düzeltmeleri";
+}
+<section class="hero compact-hero"><div><p class="eyebrow">Onay merkezi</p><h1>Puantaj düzeltmeleri</h1><p>Personelin gerekçeli giriş ve çıkış saati düzeltme taleplerini değerlendirin.</p></div><span class="summary-pill">@Model.Count(x => x.Status == AttendanceCorrectionStatus.Pending) bekleyen</span></section>
+@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+<section class="panel" aria-labelledby="correction-list-title">
+    <div class="panel-heading"><div><p class="eyebrow">Talepler</p><h2 id="correction-list-title">Düzeltme listesi</h2></div></div>
+    @if (Model.Count == 0) { <div class="panel-empty"><strong>Henüz düzeltme talebi bulunmuyor.</strong></div> }
+    else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Personel</th><th>Tarih</th><th>İstenen saatler</th><th>Gerekçe</th><th>Durum / işlem</th></tr></thead><tbody>
+        @foreach (var item in Model) { <tr>
+            <td><strong>@item.EmployeeName</strong><small>@item.EmployeeNumber</small></td><td>@item.WorkDate.ToString("dd.MM.yyyy")<small>@item.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm") tarihinde istendi</small></td>
+            <td><strong>@item.RequestedEntry.ToString("HH:mm") – @item.RequestedExit.ToString("HH:mm")</strong><small>@(item.RequestedExit <= item.RequestedEntry ? "Gece çalışması" : "Gündüz çalışması")</small></td><td class="reason-cell">@item.Reason</td>
+            <td>@if (item.Status == AttendanceCorrectionStatus.Pending) { <form asp-action="Review" method="post" class="review-stack"><input type="hidden" name="id" value="@item.Id" /><label class="visually-hidden" for="note-@item.Id">Karar notu</label><input id="note-@item.Id" name="Note" maxlength="500" placeholder="Karar notu (isteğe bağlı)" /><div><button class="btn btn-sm btn-success" name="Approve" value="true" type="submit">Onayla</button><button class="btn btn-sm btn-outline-danger" name="Approve" value="false" type="submit">Reddet</button></div></form> } else { <span class="status @(item.Status == AttendanceCorrectionStatus.Approved ? "success" : "danger")">@(item.Status == AttendanceCorrectionStatus.Approved ? "Onaylandı" : "Reddedildi")</span><small>@item.ReviewNote</small> }</td>
+        </tr> }
+    </tbody></table></div> }
+</section>

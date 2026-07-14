@@ -1,0 +1,21 @@
+@model FaydamPDKS.Core.DTOs.UpdateEmployeeDto
+@{
+    ViewData["Title"] = "Personel Düzenle";
+    var roles = ViewBag.Roles as IReadOnlyList<FaydamPDKS.Core.DTOs.RoleOptionDto> ?? [];
+    var departments = ViewBag.Departments as IReadOnlyList<FaydamPDKS.Core.DTOs.DepartmentOptionDto> ?? [];
+}
+<section class="hero compact-hero"><div><p class="eyebrow">Personel yönetimi</p><h1>Personeli düzenle</h1><p>Kimlik, organizasyon ve rol bilgilerini güncelleyin.</p></div><a class="btn btn-light" asp-action="Index">Listeye dön</a></section>
+<section class="panel edit-panel">
+    <form asp-action="Edit" method="post" class="admin-form wide-form">
+        <input asp-for="Id" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+        <div class="form-field"><label asp-for="EmployeeNumber">Sicil numarası</label><input asp-for="EmployeeNumber" /><span asp-validation-for="EmployeeNumber"></span></div>
+        <div class="form-field"><label asp-for="FullName">Ad soyad</label><input asp-for="FullName" /><span asp-validation-for="FullName"></span></div>
+        <div class="form-field"><label asp-for="Email">Kurumsal e-posta</label><input asp-for="Email" /><span asp-validation-for="Email"></span></div>
+        <div class="form-field"><label asp-for="DepartmentId">İşyeri / bölüm</label><select asp-for="DepartmentId"><option value="">Bölüm seçilmedi</option>@foreach (var department in departments) { <option value="@department.Id">@department.WorkplaceName · @department.DepartmentName</option> }</select></div>
+        <div class="form-field"><label asp-for="HireDate">İşe giriş tarihi</label><input asp-for="HireDate" type="date" /></div>
+        <div class="form-field"><label asp-for="RoleId">Rol</label><select asp-for="RoleId">@foreach (var role in roles) { <option value="@role.Id">@role.Name</option> }</select></div>
+        <div class="form-actions"><a class="btn btn-light" asp-action="Index">Vazgeç</a><button class="btn btn-primary" type="submit">Değişiklikleri kaydet</button></div>
+    </form>
+</section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

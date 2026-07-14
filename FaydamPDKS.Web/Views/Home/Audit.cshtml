@@ -1,0 +1,20 @@
+@model IReadOnlyList<FaydamPDKS.Core.DTOs.AuditLogListItemDto>
+@{
+    ViewData["Title"] = "Denetim Kayıtları";
+}
+<section class="hero compact-hero">
+    <div><p class="eyebrow">Güvenlik ve izlenebilirlik</p><h1>Denetim kayıtları</h1><p>Kritik işlemlerin aktör, zaman ve değer değişikliklerini inceleyin.</p></div>
+    <span class="summary-pill">Son @Model.Count kayıt</span>
+</section>
+<section class="panel" aria-labelledby="audit-list-title">
+    <div class="panel-heading"><div><p class="eyebrow">Append-only kayıt</p><h2 id="audit-list-title">İşlem geçmişi</h2></div></div>
+    @if (Model.Count == 0) { <div class="panel-empty"><strong>Henüz denetim kaydı bulunmuyor.</strong></div> }
+    else { <div class="table-responsive"><table class="table align-middle">
+        <thead><tr><th>Zaman</th><th>Aktör</th><th>İşlem</th><th>Varlık</th><th>Değişiklik</th></tr></thead>
+        <tbody>@foreach (var item in Model) { <tr>
+            <td><time datetime="@item.OccurredAt.ToString("O")">@item.OccurredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</time><small>@(item.CorrelationId ?? "İstek kimliği yok")</small></td>
+            <td><strong>@item.ActorName</strong></td><td><code>@item.Action</code></td><td>@item.EntityType<small>@item.EntityId</small></td>
+            <td><details><summary>Değerleri göster</summary><div class="audit-values"><div><strong>Önce</strong><pre>@(item.OldValuesJson ?? "—")</pre></div><div><strong>Sonra</strong><pre>@(item.NewValuesJson ?? "—")</pre></div></div></details></td>
+        </tr> }</tbody>
+    </table></div> }
+</section>
