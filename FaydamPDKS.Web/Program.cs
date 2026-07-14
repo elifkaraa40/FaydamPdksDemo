@@ -8,6 +8,11 @@ using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddJsonFile(
+    "appsettings.Local.json",
+    optional: false,
+    reloadOnChange: true);
+
 builder.Services.AddPdksData(builder.Configuration);
 builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
