@@ -1,5 +1,6 @@
 using FaydamPDKS.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using FaydamPDKS.Core.Attendance;
 
 namespace FaydamPDKS.Data
 {
@@ -112,6 +113,33 @@ namespace FaydamPDKS.Data
                     Id = Guid.NewGuid(), EmployeeId = employeeId, ShiftId = shift.Id,
                     ValidFrom = DateOnly.FromDateTime(DateTime.UtcNow)
                 }));
+                await context.SaveChangesAsync();
+            }
+
+            var mainZone = await context.Zones.FirstOrDefaultAsync(x => x.Name == "Faydam Merkez Giriş-Çıkış");
+            if (mainZone is null)
+            {
+                mainZone = new Zone { Name = "Faydam Merkez Giriş-Çıkış", WorkplaceId = workplace.Id, IsActive = true };
+                context.Zones.Add(mainZone);
+                await context.SaveChangesAsync();
+            }
+
+            if (!await context.AttendanceQrCodes.AnyAsync())
+            {
+                var createdAt = DateTimeOffset.UtcNow;
+                context.AttendanceQrCodes.AddRange(
+                    new AttendanceQrCode
+                    {
+                        Id = Guid.NewGuid(), WorkplaceId = workplace.Id, ZoneId = mainZone.Id, Name = "Mevcut Giriş QR",
+                        EventType = AttendanceEventType.Entry, TokenHash = "568A654846A94ACA3682AAC2BB5197E896FFFD2018B5A296483F0A6C543EE0BA",
+                        IsLegacy = true, IsActive = true, CreatedAt = createdAt
+                    },
+                    new AttendanceQrCode
+                    {
+                        Id = Guid.NewGuid(), WorkplaceId = workplace.Id, ZoneId = mainZone.Id, Name = "Mevcut Çıkış QR",
+                        EventType = AttendanceEventType.Exit, TokenHash = "4115505540BD420C0B4BC01B5733A1EDB910897747BA5EA9CD25E13BC597C481",
+                        IsLegacy = true, IsActive = true, CreatedAt = createdAt
+                    });
                 await context.SaveChangesAsync();
             }
         }

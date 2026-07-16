@@ -1,0 +1,16 @@
+@model FaydamPDKS.Core.DTOs.DashboardDto
+@{ ViewData["Title"] = "İşlemler"; }
+<header class="module-hero"><div><p class="eyebrow">Görev ve onay merkezi</p><h1>İşlemler</h1><p>İncelemeniz ve sonuçlandırmanız gereken kayıtları buradan yönetin.</p></div><span class="module-total"><strong>@Model.PendingLeaveCount</strong><small>Bekleyen izin</small></span></header>
+<div class="module-layout compact">
+    <nav class="module-sidebar" aria-label="İşlem alt başlıkları"><strong>İşlemler</strong><a href="#pending">Bekleyenler</a><a href="#history">Kayıtlar</a></nav>
+    <main class="module-content">
+        <section class="module-section" id="pending"><div class="module-section-heading"><span>01</span><div><h2>Bekleyen İşlemler</h2><p>Öncelikli inceleme ve onay görevlerinizi tamamlayın.</p></div></div><div class="module-card-grid">
+            <a class="module-card featured" asp-controller="LeaveRequests" asp-action="Index"><span>İZ</span><div><h3>Onay Bekleyen İzinler</h3><p>Personel izin taleplerini inceleyip sonuçlandırın.</p></div><em>@Model.PendingLeaveCount</em><b>→</b></a>
+            <a class="module-card" asp-controller="AttendanceCorrections" asp-action="Index"><span>PD</span><div><h3>Puantaj Düzeltmeleri</h3><p>Eksik veya hatalı giriş-çıkış kayıtlarını düzeltin.</p></div><b>→</b></a>
+        </div></section>
+        <section class="module-section" id="history"><div class="module-section-heading"><span>02</span><div><h2>İşlem Kayıtları</h2><p>Tamamlanan ve denetime açık yönetim hareketlerini görüntüleyin.</p></div></div><div class="module-card-grid">
+            <a class="module-card" asp-controller="AttendanceQr" asp-action="Index" asp-fragment="transitions"><span>GÇ</span><div><h3>Geçiş Kayıtları</h3><p>Son mobil QR giriş ve çıkışlarını inceleyin.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="Audit" asp-action="Index"><span>DK</span><div><h3>Denetim Kayıtları</h3><p>Yönetici işlemlerinin ayrıntılı geçmişine ulaşın.</p></div><b>→</b></a>
+        </div></section>
+    </main>
+</div>

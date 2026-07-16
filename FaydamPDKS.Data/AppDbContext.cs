@@ -27,6 +27,7 @@ namespace FaydamPDKS.Data
         public DbSet<Department> Departments { get; set; }
         public DbSet<WorkCalendarDay> WorkCalendarDays { get; set; }
         public DbSet<AttendanceTerminal> AttendanceTerminals { get; set; }
+        public DbSet<AttendanceQrCode> AttendanceQrCodes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -139,6 +140,14 @@ namespace FaydamPDKS.Data
             modelBuilder.Entity<AttendanceTerminal>().HasOne(x => x.Workplace).WithMany().HasForeignKey(x => x.WorkplaceId)
                 .OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<AttendanceTerminal>().HasIndex(x => x.SerialNumber).IsUnique();
+            modelBuilder.Entity<Zone>().HasOne(x => x.Workplace).WithMany().HasForeignKey(x => x.WorkplaceId)
+                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<AttendanceQrCode>().HasOne(x => x.Workplace).WithMany().HasForeignKey(x => x.WorkplaceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<AttendanceQrCode>().HasOne(x => x.Zone).WithMany().HasForeignKey(x => x.ZoneId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<AttendanceQrCode>().HasIndex(x => x.TokenHash).IsUnique();
+            modelBuilder.Entity<AttendanceQrCode>().HasIndex(x => new { x.WorkplaceId, x.ZoneId, x.EventType, x.IsActive });
 
         }
     }

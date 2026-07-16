@@ -1,0 +1,39 @@
+@{ ViewData["Title"] = "PDKS"; }
+
+<header class="module-hero">
+    <div><p class="eyebrow">Personel Devam Kontrol Sistemi</p><h1>PDKS Yönetim Merkezi</h1><p>Giriş-çıkış, izin, vardiya ve çalışma takvimi işlemlerini tek noktadan yönetin.</p></div>
+</header>
+
+<div class="module-layout">
+    <nav class="module-sidebar" aria-label="PDKS alt başlıkları">
+        <strong>PDKS</strong>
+        <a href="#attendance">Giriş-Çıkış</a>
+        <a href="#leave">İzin Yönetimi</a>
+        <a href="#shift">Vardiya ve Planlama</a>
+        <a href="#calendar">Çalışma Takvimi</a>
+        <a href="#definitions">Tanımlamalar</a>
+    </nav>
+    <main class="module-content">
+        <section class="module-section" id="attendance"><div class="module-section-heading"><span>01</span><div><h2>Giriş-Çıkış Yönetimi</h2><p>Mobil QR kodlarını ve personel geçiş hareketlerini yönetin.</p></div></div><div class="module-card-grid">
+            <a class="module-card featured" asp-controller="AttendanceQr" asp-action="Index" asp-fragment="qr-codes"><span>QR</span><div><h3>QR Kodları</h3><p>Giriş ve çıkış QR’larını oluşturun, yenileyin veya pasifleştirin.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="AttendanceQr" asp-action="Index" asp-fragment="transitions"><span>GÇ</span><div><h3>Geçiş Kayıtları</h3><p>Mobil uygulamadan gelen giriş ve çıkış hareketlerini inceleyin.</p></div><b>→</b></a>
+        </div></section>
+        <section class="module-section" id="leave"><div class="module-section-heading"><span>02</span><div><h2>İzin Yönetimi</h2><p>Personel izin taleplerini ve yönetim hareketlerini takip edin.</p></div></div><div class="module-card-grid">
+            <a class="module-card" asp-controller="LeaveRequests" asp-action="Index"><span>İZ</span><div><h3>İzinler ve Talepler</h3><p>Bekleyen ve sonuçlanan izin taleplerini görüntüleyin.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="Audit" asp-action="Index"><span>DK</span><div><h3>İzin Yönetim İşlemleri</h3><p>İzinler üzerinde yapılan yönetici işlemlerini denetleyin.</p></div><b>→</b></a>
+        </div></section>
+        <section class="module-section" id="shift"><div class="module-section-heading"><span>03</span><div><h2>Vardiya ve Planlama</h2><p>Çalışma düzenini ve vardiya kurallarını planlayın.</p></div></div><div class="module-card-grid three">
+            <a class="module-card" asp-controller="Shifts" asp-action="Index"><span>VR</span><div><h3>Vardiyalar</h3><p>Vardiya saatlerini yönetin.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="Shifts" asp-action="Index"><span>ÇP</span><div><h3>Çalışma Planları</h3><p>Personel çalışma düzenlerini planlayın.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="Shifts" asp-action="Index"><span>VŞ</span><div><h3>Vardiya Şablonları</h3><p>Tekrar kullanılabilir şablonlar oluşturun.</p></div><b>→</b></a>
+        </div></section>
+        <section class="module-section" id="calendar"><div class="module-section-heading"><span>04</span><div><h2>Çalışma Takvimi</h2><p>Takvim, tatil ve organizasyon günlerini belirleyin.</p></div></div><div class="module-card-grid">
+            <a class="module-card" asp-controller="WorkCalendar" asp-action="Index"><span>TK</span><div><h3>Çalışma Takvimi</h3><p>İş günlerini, tatilleri ve özel günleri yönetin.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="Organization" asp-action="Index"><span>OT</span><div><h3>Organizasyon Takvimi</h3><p>Organizasyona bağlı takvim tanımlarını inceleyin.</p></div><b>→</b></a>
+        </div></section>
+        <section class="module-section" id="definitions"><div class="module-section-heading"><span>05</span><div><h2>PDKS Tanımlamaları</h2><p>Sistemin temel işyeri ve organizasyon ayarlarını yönetin.</p></div></div><div class="module-card-grid">
+            <a class="module-card" asp-controller="WorkCalendar" asp-action="Index"><span>TG</span><div><h3>Tatiller ve Özel Günler</h3><p>Resmî tatil ve şirkete özel günleri tanımlayın.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="Organization" asp-action="Index"><span>İB</span><div><h3>İşyeri ve Bölümler</h3><p>Firma, işyeri ve bölüm yapısını düzenleyin.</p></div><b>→</b></a>
+        </div></section>
+    </main>
+</div>

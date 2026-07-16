@@ -29,6 +29,23 @@ public sealed class HomeController(
         return View(await dashboard.GetAsync(cancellationToken));
     }
 
+    [Authorize(Roles = "Yonetici")]
+    [HttpGet]
+    public async Task<IActionResult> Search(string? q, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2)
+            return Json(Array.Empty<object>());
+
+        var matches = await users.SearchAsync(q, cancellationToken: cancellationToken);
+        return Json(matches.Select(item => new
+        {
+            title = item.Name,
+            description = $"{item.EmployeeNumber} · {item.Department?.Name ?? item.DepartmentLegacy ?? "Bölüm belirtilmemiş"}",
+            category = "Personel",
+            url = Url.Action("Edit", "Employees", new { id = item.Id })
+        }));
+    }
+
     [Authorize]
     [HttpGet]
     public async Task<IActionResult> Account(string section = "personal", CancellationToken cancellationToken = default)

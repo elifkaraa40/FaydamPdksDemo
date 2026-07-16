@@ -57,6 +57,7 @@ Başarılı yanıt:
 | `GET` | `/attendance/today` | Bugünkü vardiya ve puantaj özeti |
 | `GET` | `/attendance?from=2026-07-01&to=2026-07-31` | Tarih aralığı puantaj listesi |
 | `POST` | `/attendance/events` | Mobil geçiş olayı gönderme |
+| `POST` | `/qr-attendance/scan` | Yönetilen QR ile güvenli giriş/çıkış olayı gönderme |
 | `GET` | `/attendance-corrections` | Kullanıcının puantaj düzeltme talepleri |
 | `POST` | `/attendance-corrections` | Gerekçeli giriş/çıkış düzeltme talebi |
 | `GET` | `/leave-requests` | Kullanıcının izin talepleri |
@@ -123,6 +124,20 @@ Her mobil olayda cihaz tarafından üretilmiş benzersiz `deviceEventId` gönder
   "zoneId": 12
 }
 ```
+
+### `POST /qr-attendance/scan`
+
+QR yönetimi ekranından oluşturulan veya sisteme tanıtılan mevcut QR'ın ham değeri değiştirilmeden gönderilir. Mobil istemci QR metninden giriş/çıkış ya da bölge tahmini yapmaz; bu karar aktif QR kaydına göre sunucuda verilir.
+
+```json
+{
+  "qrValue": "faydam://attendance/scan?token=...",
+  "occurredAt": "2026-07-16T08:57:12+03:00",
+  "deviceEventId": "her-okutma-icin-benzersiz-uuid"
+}
+```
+
+Başarılı yanıt `201 Created` döner ve `eventType`, `workplaceName`, `zoneName`, `occurredAt` alanlarını içerir. Yenilenmiş, pasif veya bilinmeyen QR için `400 INVALID_OR_INACTIVE_QR`; aynı cihaz olayı için `409 DUPLICATE_EVENT` döner.
 
 ### Puantaj geçmişi
 

@@ -1,0 +1,16 @@
+@{ ViewData["Title"] = "Raporlama"; }
+<header class="module-hero"><div><p class="eyebrow">Analiz ve raporlama</p><h1>Raporlama Merkezi</h1><p>Devam, izin ve denetim verilerine tek noktadan ulaşın.</p></div></header>
+<div class="module-layout compact">
+    <nav class="module-sidebar" aria-label="Rapor alt başlıkları"><strong>Raporlama</strong><a href="#attendance-reports">PDKS Raporları</a><a href="#management-reports">Yönetim Kayıtları</a></nav>
+    <main class="module-content">
+        <section class="module-section" id="attendance-reports"><div class="module-section-heading"><span>01</span><div><h2>PDKS Raporları</h2><p>Giriş-çıkış ve çalışma sürelerini filtreleyerek inceleyin.</p></div></div><div class="module-card-grid three">
+            <a class="module-card featured" asp-controller="Reports" asp-action="Index"><span>PR</span><div><h3>Puantaj Raporu</h3><p>Personelin günlük ve dönemsel puantajını görüntüleyin.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="Reports" asp-action="Index"><span>GÇ</span><div><h3>Giriş-Çıkış Raporu</h3><p>Geçiş zamanlarını ve eksik kayıtları inceleyin.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="Reports" asp-action="Index"><span>İZ</span><div><h3>İzin Raporu</h3><p>İzin kullanımını personel ve tarihe göre karşılaştırın.</p></div><b>→</b></a>
+        </div></section>
+        <section class="module-section" id="management-reports"><div class="module-section-heading"><span>02</span><div><h2>Yönetim Kayıtları</h2><p>Sistemde gerçekleştirilen kritik işlemleri izleyin.</p></div></div><div class="module-card-grid">
+            <a class="module-card" asp-controller="Audit" asp-action="Index"><span>DK</span><div><h3>Denetim Kayıtları</h3><p>Kimin, ne zaman, hangi değişikliği yaptığını görüntüleyin.</p></div><b>→</b></a>
+            <a class="module-card" asp-controller="AttendanceCorrections" asp-action="Index"><span>PD</span><div><h3>Düzeltme Geçmişi</h3><p>Puantaj düzeltme taleplerini ve sonuçlarını inceleyin.</p></div><b>→</b></a>
+        </div></section>
+    </main>
+</div>

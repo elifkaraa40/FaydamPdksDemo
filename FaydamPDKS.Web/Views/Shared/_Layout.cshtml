@@ -1,6 +1,18 @@
 @{
     var uiTheme = Context.Request.Cookies["Faydam.Theme"] == "dark" ? "dark" : "light";
     var uiLanguage = Context.Request.Cookies["Faydam.Language"] == "en" ? "en" : "tr";
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
+    var isDashboard = currentController.Equals("Home", StringComparison.OrdinalIgnoreCase)
+        && currentAction.Equals("Index", StringComparison.OrdinalIgnoreCase);
+    var isPdks = new[] { "LeaveRequests", "AttendanceQr", "Shifts", "WorkCalendar", "Organization" }
+        .Contains(currentController, StringComparer.OrdinalIgnoreCase)
+        || (currentController.Equals("Modules", StringComparison.OrdinalIgnoreCase) && currentAction.Equals("Pdks", StringComparison.OrdinalIgnoreCase));
+    var isPersonnel = currentController.Equals("Employees", StringComparison.OrdinalIgnoreCase);
+    var isReporting = new[] { "Reports", "Audit" }.Contains(currentController, StringComparer.OrdinalIgnoreCase)
+        || (currentController.Equals("Modules", StringComparison.OrdinalIgnoreCase) && currentAction.Equals("Reporting", StringComparison.OrdinalIgnoreCase));
+    var isActions = currentController.Equals("AttendanceCorrections", StringComparison.OrdinalIgnoreCase)
+        || (currentController.Equals("Modules", StringComparison.OrdinalIgnoreCase) && currentAction.Equals("Operations", StringComparison.OrdinalIgnoreCase));
 }
 <!DOCTYPE html>
 <html lang="@uiLanguage" data-theme="@uiTheme">
@@ -30,39 +42,37 @@
                 <div class="navbar-collapse collapse justify-content-between">
                     <ul class="navbar-nav ms-lg-4 gap-lg-2">
                         <li class="nav-item">
-                            <a class="nav-link active" asp-controller="Home" asp-action="Index">@(uiLanguage == "en" ? "Overview" : "Genel Bakış")</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#attendance">@(uiLanguage == "en" ? "Attendance" : "Puantaj")</a>
+                            <a class="nav-link @(isDashboard ? "active" : null)" asp-controller="Home" asp-action="Index" aria-current="@(isDashboard ? "page" : null)">@(uiLanguage == "en" ? "Dashboard" : "Kontrol Paneli")</a>
                         </li>
                         @if (User.IsInRole("Yonetici"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="LeaveRequests" asp-action="Index">@(uiLanguage == "en" ? "Leave" : "İzinler")</a>
+                                <a class="nav-link @(isPdks ? "active" : null)" asp-controller="Modules" asp-action="Pdks" aria-current="@(isPdks ? "page" : null)">PDKS</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Employees" asp-action="Index">@(uiLanguage == "en" ? "Employees" : "Personel")</a>
+                                <a class="nav-link @(isPersonnel ? "active" : null)" asp-controller="Employees" asp-action="Index" aria-current="@(isPersonnel ? "page" : null)">@(uiLanguage == "en" ? "Employees" : "Personel")</a>
                             </li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Organization" asp-action="Index">@(uiLanguage == "en" ? "Organization" : "Organizasyon")</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="WorkCalendar" asp-action="Index">@(uiLanguage == "en" ? "Calendar" : "Takvim")</a></li>
                             <li class="nav-item">
-                                <a class="nav-link" asp-controller="Shifts" asp-action="Index">@(uiLanguage == "en" ? "Shifts" : "Vardiyalar")</a>
+                                <a class="nav-link @(isReporting ? "active" : null)" asp-controller="Modules" asp-action="Reporting" aria-current="@(isReporting ? "page" : null)">@(uiLanguage == "en" ? "Reporting" : "Raporlama")</a>
                             </li>
-                        }
-                        @if (User.IsInRole("Yonetici"))
-                        {
-                            <li class="nav-item"><a class="nav-link" asp-controller="Reports" asp-action="Index">@(uiLanguage == "en" ? "Reports" : "Raporlar")</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="AttendanceCorrections" asp-action="Index">@(uiLanguage == "en" ? "Corrections" : "Düzeltmeler")</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Audit" asp-action="Index">@(uiLanguage == "en" ? "Audit" : "Denetim")</a></li>
+                            <li class="nav-item">
+                                <a class="nav-link @(isActions ? "active" : null)" asp-controller="Modules" asp-action="Operations" aria-current="@(isActions ? "page" : null)">@(uiLanguage == "en" ? "Actions" : "İşlemler")</a>
+                            </li>
                         }
                     </ul>
                     <div class="user-menu navbar-tools">
-                        <label class="navbar-search">
-                            <span class="visually-hidden">Ara</span>
-                            <input type="search" placeholder="@(uiLanguage == "en" ? "Search" : "Ara")" aria-label="@(uiLanguage == "en" ? "Search site" : "Site içinde ara")" />
-                            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m21 21-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
-                        </label>
-                        <a class="navbar-icon-link has-indicator" asp-controller="Home" asp-action="Account" asp-route-section="notifications" aria-label="Bildirimler">
+                        @if (User.IsInRole("Yonetici"))
+                        {
+                            <div class="global-search" data-global-search data-search-url="@Url.Action("Search", "Home")">
+                                <label class="navbar-search">
+                                    <span class="visually-hidden">Genel arama</span>
+                                    <input type="search" placeholder="Personel veya sayfa ara" aria-label="Personel veya sayfa ara" autocomplete="off" aria-expanded="false" aria-controls="global-search-results" />
+                                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m21 21-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
+                                </label>
+                                <div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
+                            </div>
+                        }
+                        <a class="navbar-icon-link" asp-controller="Home" asp-action="Account" asp-route-section="notifications" aria-label="Bildirimler" title="Bildirimler">
                             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4" /></svg>
                         </a>
                         <a class="navbar-icon-link" asp-controller="Home" asp-action="Help" aria-label="Yardım" title="Yardım">
@@ -86,6 +96,38 @@
                 </div>
             </div>
         </nav>
+        @if (User.IsInRole("Yonetici") && (isPdks || isReporting || isActions))
+        {
+            <div class="context-nav-wrap">
+                <nav class="context-nav container-fluid px-lg-4" aria-label="Modül alt menüsü">
+                    @if (isPdks)
+                    {
+                        <a class="context-home @(currentController == "Modules" ? "active" : null)" asp-controller="Modules" asp-action="Pdks"><span>←</span> PDKS Merkezi</a>
+                        <span class="context-divider" aria-hidden="true"></span>
+                        <a class="@(currentController == "AttendanceQr" ? "active" : null)" asp-controller="AttendanceQr" asp-action="Index">Giriş-Çıkış</a>
+                        <a class="@(currentController == "LeaveRequests" ? "active" : null)" asp-controller="LeaveRequests" asp-action="Index">İzin Yönetimi</a>
+                        <a class="@(currentController == "Shifts" ? "active" : null)" asp-controller="Shifts" asp-action="Index">Vardiya ve Planlama</a>
+                        <a class="@(currentController == "WorkCalendar" ? "active" : null)" asp-controller="WorkCalendar" asp-action="Index">Çalışma Takvimi</a>
+                        <a class="@(currentController == "Organization" ? "active" : null)" asp-controller="Organization" asp-action="Index">Tanımlamalar</a>
+                    }
+                    else if (isReporting)
+                    {
+                        <a class="context-home @(currentController == "Modules" ? "active" : null)" asp-controller="Modules" asp-action="Reporting"><span>←</span> Raporlama Merkezi</a>
+                        <span class="context-divider" aria-hidden="true"></span>
+                        <a class="@(currentController == "Reports" ? "active" : null)" asp-controller="Reports" asp-action="Index">PDKS Raporları</a>
+                        <a class="@(currentController == "Audit" ? "active" : null)" asp-controller="Audit" asp-action="Index">Denetim Kayıtları</a>
+                    }
+                    else if (isActions)
+                    {
+                        <a class="context-home @(currentController == "Modules" ? "active" : null)" asp-controller="Modules" asp-action="Operations"><span>←</span> İşlemler Merkezi</a>
+                        <span class="context-divider" aria-hidden="true"></span>
+                        <a class="@(currentController == "AttendanceCorrections" ? "active" : null)" asp-controller="AttendanceCorrections" asp-action="Index">Puantaj Düzeltmeleri</a>
+                        <a asp-controller="LeaveRequests" asp-action="Index">İzin Onayları</a>
+                        <a asp-controller="AttendanceQr" asp-action="Index" asp-fragment="transitions">Geçiş Kayıtları</a>
+                    }
+                </nav>
+            </div>
+        }
     </header>
     <div class="container-fluid app-shell px-lg-4">
         <main id="main-content" role="main">

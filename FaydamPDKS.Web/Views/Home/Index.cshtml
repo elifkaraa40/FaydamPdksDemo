@@ -1,49 +1,89 @@
 @model FaydamPDKS.Core.DTOs.DashboardDto
 @{
-    ViewData["Title"] = "Genel Bakış";
+    ViewData["Title"] = "Kontrol Paneli";
     var culture = new System.Globalization.CultureInfo("tr-TR");
+    var total = Math.Max(1, Model.TotalPersonnel);
+    var presentRate = Math.Round(Model.PresentCount * 100d / total);
+    var lateRate = Math.Round(Model.LateCount * 100d / total);
+    var leaveRate = Math.Round(Model.OnLeaveCount * 100d / total);
+    var missingRate = Math.Round(Model.MissingRecordCount * 100d / total);
 }
 
-<section class="hero" aria-labelledby="page-title">
+<section class="dashboard-heading" aria-labelledby="page-title">
     <div>
         <p class="eyebrow">@Model.WorkDate.ToDateTime(TimeOnly.MinValue).ToString("dd MMMM yyyy · dddd", culture)</p>
-        <h1 id="page-title">Günaydın, @User.Identity?.Name</h1>
-        <p>Ekibinizin bugünkü çalışma durumunu tek ekrandan izleyin.</p>
+        <h1 id="page-title">Kontrol Paneli</h1>
+        <p>Ekibinizin devam durumunu, istisnaları ve bekleyen işlemleri tek ekrandan izleyin.</p>
     </div>
-    <a class="btn btn-primary action-button" asp-controller="LeaveRequests" asp-action="Index">İzinleri yönet</a>
+    <nav class="dashboard-quick-links" aria-label="Hızlı işlemler">
+        <a asp-controller="WorkCalendar" asp-action="Index" title="Tarih seçin" aria-label="Çalışma takvimini aç">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>
+        </a>
+        <a asp-controller="AttendanceCorrections" asp-action="Index" title="Puantaj düzeltmelerini aç" aria-label="Puantaj düzeltmelerini aç">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7-4 4 4 4M3 11h13m1-4 4 4-4 4m4-4H8" /></svg>
+        </a>
+        <a asp-controller="Reports" asp-action="Index" title="Raporu göster" aria-label="Puantaj raporunu göster">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9m5 11V4m5 16v-7m5 7V7M2 20h20" /></svg>
+        </a>
+        <a asp-controller="Home" asp-action="Account" asp-route-section="appearance" title="Görünüm ayarları" aria-label="Görünüm ayarlarını aç">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+        </a>
+    </nav>
 </section>
 
 <section class="metric-grid" aria-label="Günlük özet">
-    <article class="metric-card"><span class="metric-icon success">✓</span><div><p>İş yerinde</p><strong>@Model.PresentCount</strong><small>Toplam @Model.TotalPersonnel personel</small></div></article>
-    <article class="metric-card"><span class="metric-icon warning">↗</span><div><p>Geç başlayan</p><strong>@Model.LateCount</strong><small>Bugünkü ilk girişlere göre</small></div></article>
-    <article class="metric-card"><span class="metric-icon info">◷</span><div><p>İzinli</p><strong>@Model.OnLeaveCount</strong><small>Onaylanmış izinler</small></div></article>
-    <article class="metric-card"><span class="metric-icon danger">!</span><div><p>Giriş kaydı yok</p><strong>@Model.MissingRecordCount</strong><small>İzinli olmayan personel</small></div></article>
+    <a class="metric-card" href="#attendance"><span class="metric-icon success">✓</span><div><p>İş yerinde</p><strong>@Model.PresentCount</strong><small>Toplam @Model.TotalPersonnel personel</small></div></a>
+    <a class="metric-card" asp-controller="Reports" asp-action="Index"><span class="metric-icon warning">↗</span><div><p>Geç başlayan</p><strong>@Model.LateCount</strong><small>İlk girişlere göre</small></div></a>
+    <a class="metric-card" asp-controller="LeaveRequests" asp-action="Index"><span class="metric-icon info">◷</span><div><p>İzinli</p><strong>@Model.OnLeaveCount</strong><small>Onaylanmış izinler</small></div></a>
+    <a class="metric-card" asp-controller="Reports" asp-action="Index"><span class="metric-icon danger">!</span><div><p>Giriş kaydı yok</p><strong>@Model.MissingRecordCount</strong><small>İzinli olmayan personel</small></div></a>
 </section>
 
-<div class="content-grid">
+<div class="dashboard-chart-grid">
+    <section class="panel attendance-chart-panel" aria-labelledby="attendance-chart-title">
+        <div class="panel-heading">
+            <div><p class="eyebrow">Anlık görünüm</p><h2 id="attendance-chart-title">Çalışan devam durumu</h2></div>
+            <a asp-controller="Reports" asp-action="Index">Detaylı rapor →</a>
+        </div>
+        <div class="attendance-chart-body">
+            <div class="attendance-donut" style="--present:@presentRate%; --leave:@leaveRate%; --late:@lateRate%" role="img" aria-label="@Model.TotalPersonnel çalışanın @Model.PresentCount kadarı iş yerinde, @Model.OnLeaveCount kadarı izinli, @Model.MissingRecordCount kadarının giriş kaydı yok">
+                <div><strong>@Model.TotalPersonnel</strong><span>Toplam<br />çalışan</span></div>
+            </div>
+            <ul class="chart-legend">
+                <li><i class="legend-present"></i><span>İş yerinde</span><strong>@Model.PresentCount</strong><small>%@presentRate</small></li>
+                <li><i class="legend-late"></i><span>Geç başlayan</span><strong>@Model.LateCount</strong><small>%@lateRate</small></li>
+                <li><i class="legend-leave"></i><span>İzinli</span><strong>@Model.OnLeaveCount</strong><small>%@leaveRate</small></li>
+                <li><i class="legend-missing"></i><span>Kayıt yok</span><strong>@Model.MissingRecordCount</strong><small>%@missingRate</small></li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="panel distribution-panel" aria-labelledby="distribution-title">
+        <div class="panel-heading"><div><p class="eyebrow">Günlük dağılım</p><h2 id="distribution-title">PDKS durum özeti</h2></div></div>
+        <div class="bar-chart" role="img" aria-label="Günlük PDKS durumlarının çubuk grafiği">
+            <div><span><i style="height:@presentRate%"></i></span><strong>@Model.PresentCount</strong><small>İş yerinde</small></div>
+            <div><span><i class="bar-warning" style="height:@lateRate%"></i></span><strong>@Model.LateCount</strong><small>Geç</small></div>
+            <div><span><i class="bar-info" style="height:@leaveRate%"></i></span><strong>@Model.OnLeaveCount</strong><small>İzinli</small></div>
+            <div><span><i class="bar-danger" style="height:@missingRate%"></i></span><strong>@Model.MissingRecordCount</strong><small>Kayıt yok</small></div>
+        </div>
+    </section>
+</div>
+
+<div class="content-grid dashboard-lists">
     <section class="panel" id="attendance" aria-labelledby="attendance-title">
-        <div class="panel-heading"><div><p class="eyebrow">Canlı görünüm</p><h2 id="attendance-title">Son hareketler</h2></div></div>
+        <div class="panel-heading"><div><p class="eyebrow">Canlı görünüm</p><h2 id="attendance-title">Son hareketler</h2></div><a asp-controller="Reports" asp-action="Index">Tümünü gör</a></div>
         @if (Model.RecentMovements.Count == 0)
         {
             <div class="panel-empty"><strong>Bugün henüz hareket yok.</strong><p>Terminal veya mobil uygulamadan gelen kayıtlar burada görünecek.</p></div>
         }
         else
         {
-            <div class="table-responsive">
-                <table class="table align-middle"><thead><tr><th>Personel</th><th>İşlem</th><th>Bölge</th><th class="text-end">Zaman</th></tr></thead>
-                <tbody>
-                @foreach (var movement in Model.RecentMovements)
-                {
-                    var isEntry = movement.EventType.Equals("Giris", StringComparison.OrdinalIgnoreCase);
-                    <tr>
-                        <td><strong>@movement.EmployeeName</strong><small>@movement.EmployeeCode</small></td>
-                        <td><span class="status @(isEntry ? "success" : "neutral")">@(isEntry ? "Giriş" : "Çıkış")</span></td>
-                        <td>@movement.ZoneName</td>
-                        <td class="text-end">@movement.OccurredAt.ToString("HH:mm")<small>@movement.OccurredAt.ToString("dd MMM", culture)</small></td>
-                    </tr>
-                }
-                </tbody></table>
-            </div>
+            <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Personel</th><th>İşlem</th><th>Bölge</th><th class="text-end">Zaman</th></tr></thead><tbody>
+            @foreach (var movement in Model.RecentMovements)
+            {
+                var isEntry = movement.EventType.Equals("Giris", StringComparison.OrdinalIgnoreCase);
+                <tr><td><strong>@movement.EmployeeName</strong><small>@movement.EmployeeCode</small></td><td><span class="status @(isEntry ? "success" : "neutral")">@(isEntry ? "Giriş" : "Çıkış")</span></td><td>@movement.ZoneName</td><td class="text-end">@movement.OccurredAt.ToString("HH:mm")<small>@movement.OccurredAt.ToString("dd MMM", culture)</small></td></tr>
+            }
+            </tbody></table></div>
         }
     </section>
 
@@ -55,13 +95,7 @@
         }
         else
         {
-            <ul class="request-list">
-            @foreach (var leave in Model.PendingLeaves)
-            {
-                var initials = string.Concat(leave.EmployeeName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0]));
-                <li><span class="avatar">@initials</span><div><strong>@leave.EmployeeName</strong><small>@leave.LeaveType izni</small></div><time datetime="@leave.StartDate.ToString("yyyy-MM-dd")">@leave.StartDate.ToString("dd MMM", culture)</time></li>
-            }
-            </ul>
+            <ul class="request-list">@foreach (var leave in Model.PendingLeaves) { var initials = string.Concat(leave.EmployeeName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0])); <li><span class="avatar">@initials</span><div><strong>@leave.EmployeeName</strong><small>@leave.LeaveType izni</small></div><time datetime="@leave.StartDate.ToString("yyyy-MM-dd")">@leave.StartDate.ToString("dd MMM", culture)</time></li> }</ul>
         }
         <a class="btn btn-light w-100" asp-controller="LeaveRequests" asp-action="Index">Talepleri incele</a>
     </aside>

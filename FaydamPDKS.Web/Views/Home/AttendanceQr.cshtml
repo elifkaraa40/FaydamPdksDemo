@@ -1,0 +1,55 @@
+@using FaydamPDKS.Core.Attendance
+@model FaydamPDKS.Core.DTOs.AttendanceQrPageDto
+@{ ViewData["Title"] = "Giriş-Çıkış Yönetimi"; }
+
+<section class="hero compact-hero">
+    <div><p class="eyebrow">PDKS</p><h1>Giriş-Çıkış Yönetimi</h1><p>Mobil QR kodlarını yönetin ve personel geçişlerini tek ekrandan izleyin.</p></div>
+    <span class="summary-pill">@Model.QrCodes.Count(x => x.IsActive) aktif QR</span>
+</section>
+
+@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
+@if (ViewBag.GeneratedQr is FaydamPDKS.Core.DTOs.GeneratedAttendanceQrDto generated)
+{
+    <section class="panel qr-result" aria-labelledby="generated-qr-title">
+        <div><p class="eyebrow">@(ViewBag.QrRotated == true ? "QR yenilendi" : "QR oluşturuldu")</p><h2 id="generated-qr-title">@generated.Name</h2><p>Bu QR yalnızca şimdi gösterilir. İndirip işyerindeki eski QR ile değiştirin.</p><strong>@(generated.EventType == AttendanceEventType.Entry ? "Giriş QR'ı" : "Çıkış QR'ı")</strong></div>
+        <div class="qr-preview"><img src="@ViewBag.GeneratedQrImage" alt="@generated.Name QR kodu" /><a class="btn btn-primary" href="@ViewBag.GeneratedQrImage" download="@($"{generated.Name.Replace(" ", "-")}.png")">QR'ı indir</a><button class="btn btn-light" type="button" onclick="window.print()">Yazdır</button></div>
+    </section>
+}
+
+<nav class="qr-tabs" aria-label="Giriş çıkış bölümleri"><a href="#qr-codes" class="active">QR Kodları</a><a href="#transitions">Geçiş Kayıtları</a><a href="#settings">Ayarlar</a></nav>
+
+<div class="content-grid shift-grid" id="qr-codes">
+    <section class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">Manuel yönetim</p><h2>QR kodları</h2></div></div>
+        @if (Model.QrCodes.Count == 0) { <div class="panel-empty"><strong>Henüz QR kodu yok.</strong><p>Sağdaki formdan ilk giriş veya çıkış QR'ını oluşturun.</p></div> }
+        else
+        {
+            <div class="table-responsive"><table class="table align-middle"><thead><tr><th>QR</th><th>İşyeri / bölge</th><th>Tür</th><th>Durum</th><th class="text-end">İşlem</th></tr></thead><tbody>
+            @foreach (var item in Model.QrCodes)
+            {
+                <tr><td><strong>@item.Name</strong><small>@item.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm") @(item.IsLegacy ? "· Mevcut QR" : "")</small></td><td>@item.WorkplaceName<small>@item.ZoneName</small></td><td><span class="status @(item.EventType == AttendanceEventType.Entry ? "success" : "warning")">@(item.EventType == AttendanceEventType.Entry ? "Giriş" : "Çıkış")</span></td><td><span class="status @(item.IsActive ? "success" : "neutral")">@(item.IsActive ? "Aktif" : "Pasif")</span></td><td class="text-end"><div class="review-actions">@if (item.IsActive) { <form asp-action="Rotate" method="post" onsubmit="return confirm('Mevcut QR geçersiz olacak ve işyerindeki görsel yenisiyle değiştirilmelidir. Devam edilsin mi?');"><input type="hidden" name="id" value="@item.Id" /><button class="btn btn-sm btn-outline-primary" type="submit">Yenile</button></form><form asp-action="Deactivate" method="post" onsubmit="return confirm('Bu QR kullanım dışı bırakılsın mı?');"><input type="hidden" name="id" value="@item.Id" /><button class="btn btn-sm btn-outline-danger" type="submit">Pasife al</button></form> }</div></td></tr>
+            }
+            </tbody></table></div>
+        }
+    </section>
+    <aside class="panel create-panel">
+        <div class="panel-heading"><div><p class="eyebrow">Yeni QR</p><h2>QR oluştur</h2></div></div>
+        <form asp-action="Create" method="post" class="admin-form">
+            <div class="form-field"><label for="QrName">QR adı</label><input id="QrName" name="Name" required maxlength="100" placeholder="Merkez giriş QR" /></div>
+            <div class="form-field"><label for="QrWorkplace">İşyeri</label><select id="QrWorkplace" name="WorkplaceId" required><option value="">İşyeri seçin</option>@foreach (var workplace in Model.Workplaces) { <option value="@workplace.Id">@workplace.Code · @workplace.Name</option> }</select></div>
+            <div class="form-field"><label for="QrZone">Giriş-çıkış bölgesi</label><select id="QrZone" name="ZoneId" required><option value="">Bölge seçin</option>@foreach (var zone in Model.Zones) { <option value="@zone.Id">@zone.Name</option> }</select></div>
+            <div class="form-field"><label for="QrEventType">İşlem türü</label><select id="QrEventType" name="EventType" required><option value="1">Giriş</option><option value="2">Çıkış</option></select></div>
+            <button class="btn btn-primary w-100" type="submit">QR oluştur</button>
+        </form>
+    </aside>
+</div>
+
+<section class="panel mt-3" id="transitions">
+    <div class="panel-heading"><div><p class="eyebrow">Canlı kayıtlar</p><h2>Geçiş kayıtları</h2></div><span class="count">@Model.RecentTransitions.Count</span></div>
+    @if (Model.RecentTransitions.Count == 0) { <div class="panel-empty"><strong>Henüz geçiş kaydı yok.</strong></div> }
+    else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Personel</th><th>Bölge</th><th>İşlem</th><th>Kaynak</th><th class="text-end">Zaman</th></tr></thead><tbody>@foreach (var item in Model.RecentTransitions) { <tr><td><strong>@item.EmployeeName</strong><small>@item.EmployeeNumber</small></td><td>@item.ZoneName</td><td><span class="status @(item.EventType == "Giris" ? "success" : "warning")">@(item.EventType == "Giris" ? "Giriş" : "Çıkış")</span></td><td>@item.Source</td><td class="text-end">@item.OccurredAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</td></tr> }</tbody></table></div> }
+</section>
+
+<section class="panel qr-settings mt-3" id="settings"><div class="panel-heading"><div><p class="eyebrow">Firma yapılandırması</p><h2>Giriş-çıkış yöntemleri</h2></div></div><div class="qr-setting-grid"><div><strong>Mobil QR</strong><span class="status success">Açık</span><small>Personel mobil uygulamayla işyerindeki QR'ı okutur.</small></div><div><strong>Fiziksel terminal</strong><span class="status neutral">Kapalı</span><small>Turnike veya kart okuyucu kullanılmadığı için menüde gösterilmez.</small></div><div><strong>QR yenileme</strong><span class="status info">Manuel</span><small>Yönetici yenilediğinde eski QR hemen geçersiz olur.</small></div></div></section>

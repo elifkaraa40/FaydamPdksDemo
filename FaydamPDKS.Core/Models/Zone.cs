@@ -10,8 +10,16 @@ namespace FaydamPDKS.Core.Models
         [Column("id")]
         public int Id { get; set; }
 
+        [Column("workplace_id")]
+        public Guid? WorkplaceId { get; set; }
+
+        public Workplace? Workplace { get; set; }
+
         [Column("name")]
         [StringLength(100)]
         public string Name { get; set; } = string.Empty; // Örn: "Ana Giriş Turnikesi", "Focus Odası Kapısı"
+
+        [Column("is_active")]
+        public bool IsActive { get; set; } = true;
     }
 }

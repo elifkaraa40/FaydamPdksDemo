@@ -25,6 +25,20 @@ public sealed class UserRepository(AppDbContext context) : Repository<User>(cont
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<User>> SearchAsync(string query, int take = 6, CancellationToken cancellationToken = default)
+    {
+        var term = query.Trim().ToLowerInvariant();
+        return await Context.Users.AsNoTracking()
+            .Include(x => x.Department)
+            .Where(x => x.Name.ToLower().Contains(term)
+                || x.Email.ToLower().Contains(term)
+                || x.EmployeeNumber.ToLower().Contains(term))
+            .OrderByDescending(x => x.IsActive)
+            .ThenBy(x => x.Name)
+            .Take(Math.Clamp(take, 1, 10))
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<bool> EmailExistsAsync(string normalizedEmail, Guid? excludingUserId = null, CancellationToken cancellationToken = default)
     {
         var email = normalizedEmail.Trim().ToLowerInvariant();

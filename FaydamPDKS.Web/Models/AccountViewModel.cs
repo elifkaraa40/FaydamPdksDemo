@@ -41,7 +41,7 @@ public sealed class ChangeOwnPasswordModel
     [Required, DataType(DataType.Password)]
     public string CurrentPassword { get; set; } = string.Empty;
 
-    [Required, MinLength(12), DataType(DataType.Password)]
+    [Required, MinLength(6), DataType(DataType.Password)]
     public string NewPassword { get; set; } = string.Empty;
 
     [Required, Compare(nameof(NewPassword)), DataType(DataType.Password)]

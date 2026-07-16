@@ -31,7 +31,7 @@ public sealed class CreateEmployeeDto
     [Required]
     public Guid RoleId { get; set; }
 
-    [Required, MinLength(12), DataType(DataType.Password)]
+    [Required, MinLength(6), DataType(DataType.Password)]
     public string TemporaryPassword { get; set; } = string.Empty;
 }
 

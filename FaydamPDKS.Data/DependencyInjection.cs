@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkCalendarResolver, WorkCalendarResolver>();
         services.AddScoped<IWorkCalendarRepository, WorkCalendarRepository>();
         services.AddScoped<IAttendanceTerminalService, AttendanceTerminalService>();
+        services.AddScoped<IAttendanceQrService, AttendanceQrService>();
         services.AddScoped<IPersonalDataExportService, PersonalDataExportService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
