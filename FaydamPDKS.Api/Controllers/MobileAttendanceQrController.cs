@@ -27,13 +27,13 @@ public sealed class MobileAttendanceQrController(IAttendanceQrService qrCodes) :
                 ? BadRequest(Error("INVALID_OR_INACTIVE_QR", "QR kod geçersiz, yenilenmiş veya kullanım dışı."))
                 : StatusCode(StatusCodes.Status201Created, result);
         }
-        catch (ArgumentOutOfRangeException)
-        {
-            return BadRequest(Error("INVALID_EVENT_TIME", "Olay zamanı kabul edilen aralığın dışında."));
-        }
         catch (InvalidOperationException ex) when (ex.Message == "DUPLICATE_EVENT")
         {
             return Conflict(Error("DUPLICATE_EVENT", "Bu cihaz olayı daha önce kaydedildi."));
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "DUPLICATE_TRANSITION")
+        {
+            return Conflict(Error("DUPLICATE_TRANSITION", "Aynı geçiş türü art arda okutulamaz."));
         }
     }
 

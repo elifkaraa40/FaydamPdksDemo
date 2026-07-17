@@ -41,6 +41,25 @@ public sealed class MobileLeaveRequestServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CancelAsync(userId, created.Id));
     }
 
+    [Fact]
+    public async Task Counts_friday_to_monday_as_two_workdays_and_supports_half_day()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var userId = await SeedUserAsync(context);
+        var service = CreateService(context);
+
+        var range = await service.CreateAsync(userId,
+            new CreateLeaveRequestDto(LeaveType.Annual, new DateOnly(2026, 7, 17), new DateOnly(2026, 7, 20), null));
+        Assert.Equal(4, range.CalendarDayCount);
+        Assert.Equal(2, range.WorkDayCount);
+        await service.CancelAsync(userId, range.Id);
+
+        var halfDay = await service.CreateAsync(userId,
+            new CreateLeaveRequestDto(LeaveType.Excuse, new DateOnly(2026, 7, 21), new DateOnly(2026, 7, 21), null, LeaveDayPortion.FirstHalf));
+        Assert.Equal(.5, halfDay.WorkDayCount);
+        Assert.Equal(LeaveDayPortion.FirstHalf, halfDay.DayPortion);
+    }
+
     private static MobileLeaveRequestService CreateService(AppDbContext context)
     {
         var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -49,6 +68,7 @@ public sealed class MobileLeaveRequestServiceTests
         }).Build();
         return new MobileLeaveRequestService(
             new LeaveRequestRepository(context), new UnitOfWork(context),
+            new WorkCalendarResolver(context),
             new TestTimeProvider(new DateTimeOffset(2026, 7, 14, 8, 0, 0, TimeSpan.Zero)), config);
     }
 

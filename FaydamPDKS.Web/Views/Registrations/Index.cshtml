@@ -1,0 +1,33 @@
+@model FaydamPDKS.Web.Controllers.RegistrationApprovalPage
+@{ ViewData["Title"] = "Mobil Kayıt Onayları"; }
+
+<section class="page-heading">
+    <div><span class="eyebrow">PERSONEL</span><h1>Mobil kayıt onayları</h1><p>Telefon ve parolayla kayıt olan yeni çalışanları personel bilgileriyle eşleştirin.</p></div>
+    <a class="btn btn-outline-secondary" asp-controller="Employees" asp-action="Index">Personel listesi</a>
+</section>
+
+@if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+
+<section class="content-card">
+    @if (Model.Users.Count == 0)
+    {
+        <div class="empty-state"><h2>Bekleyen kayıt yok</h2><p>Yeni mobil kayıtlar burada görünecek.</p></div>
+    }
+    else
+    {
+        <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Ad soyad</th><th>Telefon</th><th>Personel no</th><th>Departman</th><th>İşlem</th></tr></thead><tbody>
+        @foreach (var user in Model.Users)
+        {
+            <tr>
+                <td><strong>@user.Name</strong></td><td>@user.PhoneNumber</td>
+                <td colspan="3"><div class="d-flex flex-wrap gap-2"><form class="d-flex flex-wrap gap-2 flex-grow-1" asp-action="Approve" method="post">
+                    <input type="hidden" name="id" value="@user.Id" /><input class="form-control" style="max-width:12rem" name="employeeNumber" placeholder="Örn. Faydam023" required maxlength="40" />
+                    <select class="form-select" style="max-width:16rem" name="departmentId"><option value="">Departman seçilmedi</option>@foreach (var department in Model.Departments) { <option value="@department.Id">@department.Name</option> }</select>
+                    <button class="btn btn-primary" type="submit">Onayla</button>
+                </form><form asp-action="Reject" method="post" onsubmit="return confirm('Bu kaydı reddetmek istiyor musunuz?');"><input type="hidden" name="id" value="@user.Id" /><button class="btn btn-outline-danger" type="submit">Reddet</button></form></div></td>
+            </tr>
+        }
+        </tbody></table></div>
+    }
+</section>

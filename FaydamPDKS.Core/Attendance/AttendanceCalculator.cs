@@ -7,7 +7,8 @@ public sealed class AttendanceCalculator
         ShiftDefinition shift,
         IEnumerable<AttendanceEvent> events,
         TimeZoneInfo timeZone,
-        bool isWorkingDay = true)
+        bool isWorkingDay = true,
+        int? actualBreakMinutes = null)
     {
         ArgumentNullException.ThrowIfNull(shift);
         ArgumentNullException.ThrowIfNull(events);
@@ -38,7 +39,8 @@ public sealed class AttendanceCalculator
         if (lastExit is null || lastExit <= firstEntry)
             return new(workDate, AttendanceStatus.MissingExit, firstEntry, lastExit, 0, expected, 0, 0, 0);
 
-        var worked = Math.Max(0, (int)(lastExit.Value - firstEntry.Value).TotalMinutes - shift.BreakMinutes);
+        var deductedBreak = shift.BreakMinutes + Math.Max(0, actualBreakMinutes ?? 0);
+        var worked = Math.Max(0, (int)(lastExit.Value - firstEntry.Value).TotalMinutes - deductedBreak);
         var late = isWorkingDay ? Math.Max(0, (int)(firstEntry.Value - shiftStart).TotalMinutes - shift.LateToleranceMinutes) : 0;
         var early = isWorkingDay ? Math.Max(0, (int)(shiftEnd - lastExit.Value).TotalMinutes - shift.EarlyLeaveToleranceMinutes) : 0;
         var overtime = Math.Max(0, worked - expected);

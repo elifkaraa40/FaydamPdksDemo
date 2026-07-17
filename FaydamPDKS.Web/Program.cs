@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
+using FaydamPDKS.Web.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +19,18 @@ builder.Configuration.AddJsonFile(
 builder.Services.AddPdksData(builder.Configuration);
 builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var cultures = new[] { new CultureInfo("tr-TR"), new CultureInfo("en-US") };
+    options.DefaultRequestCulture = new RequestCulture("tr-TR");
+    options.SupportedCultures = cultures;
+    options.SupportedUICultures = cultures;
+    options.RequestCultureProviders.Insert(0, new CustomRequestCultureProvider(context =>
+    {
+        var culture = context.Request.Cookies["Faydam.Language"] == "en" ? "en-US" : "tr-TR";
+        return Task.FromResult<ProviderCultureResult?>(new ProviderCultureResult(culture));
+    }));
+});
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -68,6 +83,8 @@ app.Use(async (context, next) =>
     await next();
 });
 app.UseStaticFiles();
+app.UseRequestLocalization();
+app.UseMiddleware<UiTranslationMiddleware>();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();

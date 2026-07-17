@@ -1,3 +1,6 @@
+@inject FaydamPDKS.Core.Interfaces.INotificationRepository LayoutNotifications
+@using System.Security.Claims
+@using FaydamPDKS.Core.Enums
 @{
     var uiTheme = Context.Request.Cookies["Faydam.Theme"] == "dark" ? "dark" : "light";
     var uiLanguage = Context.Request.Cookies["Faydam.Language"] == "en" ? "en" : "tr";
@@ -5,14 +8,20 @@
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
     var isDashboard = currentController.Equals("Home", StringComparison.OrdinalIgnoreCase)
         && currentAction.Equals("Index", StringComparison.OrdinalIgnoreCase);
-    var isPdks = new[] { "LeaveRequests", "AttendanceQr", "Shifts", "WorkCalendar", "Organization" }
+    var isPdks = new[] { "LeaveRequests", "AttendanceQr", "Shifts", "WorkCalendar", "Organization", "WorkLocations" }
         .Contains(currentController, StringComparer.OrdinalIgnoreCase)
         || (currentController.Equals("Modules", StringComparison.OrdinalIgnoreCase) && currentAction.Equals("Pdks", StringComparison.OrdinalIgnoreCase));
-    var isPersonnel = currentController.Equals("Employees", StringComparison.OrdinalIgnoreCase);
+    var isPersonnel = new[] { "Employees", "Registrations" }.Contains(currentController, StringComparer.OrdinalIgnoreCase);
     var isReporting = new[] { "Reports", "Audit" }.Contains(currentController, StringComparer.OrdinalIgnoreCase)
         || (currentController.Equals("Modules", StringComparison.OrdinalIgnoreCase) && currentAction.Equals("Reporting", StringComparison.OrdinalIgnoreCase));
     var isActions = currentController.Equals("AttendanceCorrections", StringComparison.OrdinalIgnoreCase)
         || (currentController.Equals("Modules", StringComparison.OrdinalIgnoreCase) && currentAction.Equals("Operations", StringComparison.OrdinalIgnoreCase));
+    var layoutNotificationItems = Array.Empty<FaydamPDKS.Core.Models.Notification>();
+    if (User.Identity?.IsAuthenticated == true && Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var layoutUserId))
+    {
+        layoutNotificationItems = (await LayoutNotifications.GetForUserAsync(layoutUserId, 5)).Where(x => !x.IsRead).ToArray();
+    }
+    var unreadNotificationCount = layoutNotificationItems.Length;
 }
 <!DOCTYPE html>
 <html lang="@uiLanguage" data-theme="@uiTheme">
@@ -42,7 +51,7 @@
                 <div class="navbar-collapse collapse justify-content-between">
                     <ul class="navbar-nav ms-lg-4 gap-lg-2">
                         <li class="nav-item">
-                            <a class="nav-link @(isDashboard ? "active" : null)" asp-controller="Home" asp-action="Index" aria-current="@(isDashboard ? "page" : null)">@(uiLanguage == "en" ? "Dashboard" : "Kontrol Paneli")</a>
+                            <a class="nav-link @((isDashboard || (currentController == "MyWork" && currentAction == "Index")) ? "active" : null)" asp-controller="@(User.IsInRole("Yonetici") ? "Home" : "MyWork")" asp-action="Index">@(uiLanguage == "en" ? "Dashboard" : "Kontrol Paneli")</a>
                         </li>
                         @if (User.IsInRole("Yonetici"))
                         {
@@ -59,6 +68,13 @@
                                 <a class="nav-link @(isActions ? "active" : null)" asp-controller="Modules" asp-action="Operations" aria-current="@(isActions ? "page" : null)">@(uiLanguage == "en" ? "Actions" : "İşlemler")</a>
                             </li>
                         }
+                        else
+                        {
+                            <li class="nav-item"><a class="nav-link @(currentController == "MyWork" && currentAction == "FieldWork" ? "active" : null)" asp-controller="MyWork" asp-action="FieldWork">Saha Görevlerim</a></li>
+                            <li class="nav-item"><a class="nav-link @(currentController == "MyWork" && currentAction == "Records" ? "active" : null)" asp-controller="MyWork" asp-action="Records">Çalışma Kayıtlarım</a></li>
+                            <li class="nav-item"><a class="nav-link @(currentController == "MyWork" && currentAction == "Leaves" ? "active" : null)" asp-controller="MyWork" asp-action="Leaves">İzinlerim</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Account" asp-route-section="notifications">Bildirimlerim</a></li>
+                        }
                     </ul>
                     <div class="user-menu navbar-tools">
                         @if (User.IsInRole("Yonetici"))
@@ -72,8 +88,9 @@
                                 <div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
                             </div>
                         }
-                        <a class="navbar-icon-link" asp-controller="Home" asp-action="Account" asp-route-section="notifications" aria-label="Bildirimler" title="Bildirimler">
+                        <a class="navbar-icon-link @(unreadNotificationCount > 0 ? "has-notifications" : null)" asp-controller="Home" asp-action="Account" asp-route-section="notifications" aria-label="@unreadNotificationCount okunmamış bildirim" title="Bildirimler">
                             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4" /></svg>
+                            @if (unreadNotificationCount > 0) { <span class="navbar-notification-badge">@unreadNotificationCount</span> }
                         </a>
                         <a class="navbar-icon-link" asp-controller="Home" asp-action="Help" aria-label="Yardım" title="Yardım">
                             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9.8 9a2.4 2.4 0 1 1 3.7 2c-1 .6-1.5 1.1-1.5 2.5M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
@@ -109,6 +126,7 @@
                         <a class="@(currentController == "Shifts" ? "active" : null)" asp-controller="Shifts" asp-action="Index">Vardiya ve Planlama</a>
                         <a class="@(currentController == "WorkCalendar" ? "active" : null)" asp-controller="WorkCalendar" asp-action="Index">Çalışma Takvimi</a>
                         <a class="@(currentController == "Organization" ? "active" : null)" asp-controller="Organization" asp-action="Index">Tanımlamalar</a>
+                        <a class="@(currentController == "WorkLocations" ? "active" : null)" asp-controller="WorkLocations" asp-action="Index">Çalışma Konumları</a>
                     }
                     else if (isReporting)
                     {
@@ -129,6 +147,24 @@
             </div>
         }
     </header>
+    @if (layoutNotificationItems.Length > 0)
+    {
+        <aside class="live-notifications" aria-label="Yeni bildirimler">
+            <div class="container-fluid px-lg-4">
+                <div class="live-notification-heading"><strong>Yeni bildirimleriniz var</strong><a asp-controller="Home" asp-action="Account" asp-route-section="notifications">Tümünü göster</a></div>
+                @foreach (var item in layoutNotificationItems.Take(3))
+                {
+                    var isManagerNotice = User.IsInRole("Yonetici");
+                    var targetController = isManagerNotice && item.Type == NotificationType.RegistrationApprovalRequested ? "Registrations" : isManagerNotice && item.Type == NotificationType.LeaveRequestCreated ? "LeaveRequests" : isManagerNotice && item.Type is NotificationType.AttendanceCorrectionCreated or NotificationType.MissingAttendanceDetected ? "AttendanceCorrections" : "MyWork";
+                    var targetAction = !isManagerNotice && item.Type is NotificationType.LeaveApproved or NotificationType.LeaveRejected ? "Leaves" : !isManagerNotice && item.Type is NotificationType.AttendanceCorrectionApproved or NotificationType.AttendanceCorrectionRejected or NotificationType.AttendanceWarning ? "Records" : "Index";
+                    <div class="live-notification-item">
+                        <span aria-hidden="true"></span><div><strong>@item.Title</strong><p>@item.Message</p></div>
+                        <form asp-controller="Home" asp-action="MarkNotificationRead" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="returnUrl" value="@Url.Action(targetAction, targetController)" /><button type="submit">Görüntüle ve kapat</button></form>
+                    </div>
+                }
+            </div>
+        </aside>
+    }
     <div class="container-fluid app-shell px-lg-4">
         <main id="main-content" role="main">
             @RenderBody()

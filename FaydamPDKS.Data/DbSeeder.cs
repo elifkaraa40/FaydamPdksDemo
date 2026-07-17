@@ -102,8 +102,9 @@ namespace FaydamPDKS.Data
             {
                 var shift = new Shift
                 {
-                    Id = Guid.NewGuid(), Name = "Standart 09:00-18:00", StartsAt = new TimeOnly(9, 0),
-                    EndsAt = new TimeOnly(18, 0), BreakMinutes = 60, LateToleranceMinutes = 5,
+                    Id = Guid.NewGuid(), Name = "Standart 08:30-18:00", StartsAt = new TimeOnly(8, 30),
+                    EndsAt = new TimeOnly(18, 0), BreakMinutes = 60, ScheduledBreakStart = new TimeOnly(12, 30),
+                    ScheduledBreakEnd = new TimeOnly(13, 30), LateToleranceMinutes = 5,
                     EarlyLeaveToleranceMinutes = 5, IsActive = true
                 };
                 context.Shifts.Add(shift);

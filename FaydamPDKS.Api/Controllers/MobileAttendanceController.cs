@@ -36,25 +36,6 @@ public sealed class MobileAttendanceController(IAttendanceService attendance) : 
         }
     }
 
-    [HttpPost("events")]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType<ApiErrorDto>(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> CreateEvent(CreateAttendanceEventRequest request, CancellationToken cancellationToken)
-    {
-        if (!TryGetUserId(out var userId)) return UnauthorizedError();
-        try
-        {
-            var created = await attendance.AddEventAsync(userId, request, cancellationToken);
-            return created
-                ? StatusCode(StatusCodes.Status201Created)
-                : Conflict(new ApiErrorDto("DUPLICATE_EVENT", "Bu cihaz olayı daha önce kaydedildi.", TraceId: HttpContext.TraceIdentifier));
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            return BadRequest(new ApiErrorDto("INVALID_EVENT_TIME", "Olay zamanı son 7 gün içinde olmalı ve gelecekte olmamalıdır.", TraceId: HttpContext.TraceIdentifier));
-        }
-    }
-
     private bool TryGetUserId(out Guid userId) =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out userId);
 

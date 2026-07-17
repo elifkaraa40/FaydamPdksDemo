@@ -28,6 +28,11 @@ namespace FaydamPDKS.Data
         public DbSet<WorkCalendarDay> WorkCalendarDays { get; set; }
         public DbSet<AttendanceTerminal> AttendanceTerminals { get; set; }
         public DbSet<AttendanceQrCode> AttendanceQrCodes { get; set; }
+        public DbSet<BreakRecord> BreakRecords { get; set; }
+        public DbSet<WorkLocationAssignment> WorkLocationAssignments { get; set; }
+        public DbSet<WorkLocationAssignmentDay> WorkLocationAssignmentDays { get; set; }
+        public DbSet<FieldWorkRequest> FieldWorkRequests { get; set; }
+        public DbSet<FieldWorkRequestDay> FieldWorkRequestDays { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -53,6 +58,7 @@ namespace FaydamPDKS.Data
             modelBuilder.Entity<User>()
                 .HasIndex(x => x.EmployeeNumber)
                 .IsUnique();
+            modelBuilder.Entity<User>().HasIndex(x => x.PhoneNumber).IsUnique().HasFilter("\"PhoneNumber\" IS NOT NULL");
 
             modelBuilder.Entity<RefreshToken>()
                 .HasIndex(x => x.TokenHash)
@@ -148,6 +154,26 @@ namespace FaydamPDKS.Data
                 .OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<AttendanceQrCode>().HasIndex(x => x.TokenHash).IsUnique();
             modelBuilder.Entity<AttendanceQrCode>().HasIndex(x => new { x.WorkplaceId, x.ZoneId, x.EventType, x.IsActive });
+            modelBuilder.Entity<BreakRecord>().HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<BreakRecord>().HasIndex(x => x.StartDeviceEventId).IsUnique();
+            modelBuilder.Entity<BreakRecord>().HasIndex(x => x.EndDeviceEventId).IsUnique()
+                .HasFilter("end_device_event_id IS NOT NULL");
+            modelBuilder.Entity<BreakRecord>().HasIndex(x => new { x.UserId, x.EndedAt });
+
+            modelBuilder.Entity<WorkLocationAssignment>().HasOne(x => x.User).WithMany()
+                .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<WorkLocationAssignment>().HasIndex(x => new { x.UserId, x.StartDate, x.EndDate, x.IsActive });
+            modelBuilder.Entity<WorkLocationAssignmentDay>().HasOne(x => x.Assignment).WithMany(x => x.Days)
+                .HasForeignKey(x => x.AssignmentId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<WorkLocationAssignmentDay>().HasIndex(x => new { x.AssignmentId, x.DayOfWeek }).IsUnique();
+
+            modelBuilder.Entity<FieldWorkRequest>().HasOne(x => x.User).WithMany()
+                .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<FieldWorkRequest>().HasIndex(x => new { x.UserId, x.StartDate, x.EndDate, x.Status });
+            modelBuilder.Entity<FieldWorkRequestDay>().HasOne(x => x.Request).WithMany(x => x.Days)
+                .HasForeignKey(x => x.RequestId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<FieldWorkRequestDay>().HasIndex(x => new { x.RequestId, x.DayOfWeek }).IsUnique();
 
         }
     }

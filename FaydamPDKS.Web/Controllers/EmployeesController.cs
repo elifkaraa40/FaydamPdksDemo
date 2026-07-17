@@ -18,7 +18,7 @@ public sealed class EmployeesController(IEmployeeAdminService employees) : Contr
     {
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Personel bilgilerini kontrol edin. Geçici parola en az 6 karakter olmalıdır.";
+            TempData["Error"] = "Personel bilgilerini kontrol edin. Geçici parola en az 8 karakter olmalıdır.";
             return RedirectToAction(nameof(Index));
         }
         try

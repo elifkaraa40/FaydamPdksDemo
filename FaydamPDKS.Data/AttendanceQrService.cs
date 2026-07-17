@@ -1,5 +1,6 @@
 using FaydamPDKS.Core.Attendance;
 using FaydamPDKS.Core.DTOs;
+using FaydamPDKS.Core.Enums;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ using System.Text;
 
 namespace FaydamPDKS.Data;
 
-public sealed class AttendanceQrService(AppDbContext context, TimeProvider timeProvider) : IAttendanceQrService
+public sealed class AttendanceQrService(AppDbContext context, TimeProvider timeProvider, IManagerNotificationService? managerNotifications = null) : IAttendanceQrService
 {
     public async Task<AttendanceQrPageDto> GetPageAsync(CancellationToken cancellationToken = default)
     {
@@ -60,8 +61,6 @@ public sealed class AttendanceQrService(AppDbContext context, TimeProvider timeP
     public async Task<ScanAttendanceQrResponse?> ScanAsync(Guid employeeId, ScanAttendanceQrRequest request, CancellationToken cancellationToken = default)
     {
         var now = timeProvider.GetUtcNow();
-        if (request.OccurredAt > now.AddMinutes(5) || request.OccurredAt < now.AddDays(-7))
-            throw new ArgumentOutOfRangeException(nameof(request.OccurredAt));
         var deviceEventId = request.DeviceEventId.Trim();
         if (await context.AccessLogs.AsNoTracking().AnyAsync(x => x.DeviceEventId == deviceEventId, cancellationToken))
             throw new InvalidOperationException("DUPLICATE_EVENT");
@@ -69,17 +68,51 @@ public sealed class AttendanceQrService(AppDbContext context, TimeProvider timeP
         var qr = await context.AttendanceQrCodes.AsNoTracking().Include(x => x.Workplace).Include(x => x.Zone)
             .SingleOrDefaultAsync(x => x.TokenHash == hash && x.IsActive, cancellationToken);
         if (qr is null) return null;
+
+        var timeZone = ResolveTimeZone(qr.Workplace.TimeZoneId);
+        var localNow = TimeZoneInfo.ConvertTime(now, timeZone);
+        var localDayStart = DateOnly.FromDateTime(localNow.DateTime)
+            .ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+        var dayStartUtc = TimeZoneInfo.ConvertTimeToUtc(localDayStart, timeZone);
+        var lastEventType = await context.AccessLogs.AsNoTracking()
+            .Where(x => x.UserId == employeeId && x.LogDate >= dayStartUtc)
+            .OrderByDescending(x => x.LogDate)
+            .Select(x => x.LogType)
+            .FirstOrDefaultAsync(cancellationToken);
+        var requestedType = qr.EventType == AttendanceEventType.Entry ? "Giris" : "Cikis";
+        if (string.Equals(lastEventType, requestedType, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("DUPLICATE_TRANSITION");
+
+        if (qr.EventType == AttendanceEventType.Exit && lastEventType is null && managerNotifications is not null)
+        {
+            var employeeName = await context.Users.AsNoTracking().Where(x => x.Id == employeeId)
+                .Select(x => x.Name).SingleOrDefaultAsync(cancellationToken) ?? "Personel";
+            await managerNotifications.NotifyAsync(NotificationType.MissingAttendanceDetected, "Eksik giriş kaydı",
+                $"{employeeName} çıkış yaptı ancak bugüne ait giriş kaydı bulunamadı.", null, cancellationToken);
+        }
+
+        if (qr.EventType == AttendanceEventType.Exit)
+        {
+            var activeBreak = await context.BreakRecords
+                .SingleOrDefaultAsync(x => x.UserId == employeeId && x.EndedAt == null, cancellationToken);
+            if (activeBreak is not null)
+            {
+                activeBreak.EndedAt = now;
+                activeBreak.AutoClosed = true;
+            }
+        }
+
         context.AccessLogs.Add(new AccessLog
         {
             UserId = employeeId,
             ZoneId = qr.ZoneId,
-            LogDate = request.OccurredAt.UtcDateTime,
-            LogType = qr.EventType == AttendanceEventType.Entry ? "Giris" : "Cikis",
+            LogDate = now.UtcDateTime,
+            LogType = requestedType,
             DeviceEventId = deviceEventId,
             Source = "MobileQr"
         });
         await context.SaveChangesAsync(cancellationToken);
-        return new(qr.EventType.ToString(), qr.Workplace.Name, qr.Zone.Name, request.OccurredAt);
+        return new(qr.EventType.ToString(), qr.Workplace.Name, qr.Zone.Name, now);
     }
 
     private async Task<GeneratedAttendanceQrDto> GenerateAsync(Guid workplaceId, int zoneId, string name,
@@ -114,4 +147,11 @@ public sealed class AttendanceQrService(AppDbContext context, TimeProvider timeP
 
     public static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     private static string Base64Url(byte[] value) => Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    private static TimeZoneInfo ResolveTimeZone(string? id)
+    {
+        var requested = string.IsNullOrWhiteSpace(id) ? "Europe/Istanbul" : id;
+        try { return TimeZoneInfo.FindSystemTimeZoneById(requested); }
+        catch (TimeZoneNotFoundException) { return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"); }
+    }
 }

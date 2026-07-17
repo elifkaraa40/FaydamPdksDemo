@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FaydamPDKS.Core.Enums;
 
 namespace FaydamPDKS.Core.Models
 {
@@ -39,6 +40,9 @@ namespace FaydamPDKS.Core.Models
 
         [Column("is_active")]
         public bool IsActive { get; set; } = true;
+
+        [Column("account_status")]
+        public AccountStatus AccountStatus { get; set; } = AccountStatus.Active;
 
         [Column("role_id")]
         [ForeignKey("Role")]

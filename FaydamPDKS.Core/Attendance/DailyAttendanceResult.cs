@@ -6,7 +6,9 @@ public enum AttendanceStatus
     MissingEntry,
     MissingExit,
     NoRecord,
-    NonWorkingDay
+    NonWorkingDay,
+    RemoteWork,
+    FieldWork
 }
 
 public sealed record DailyAttendanceResult(

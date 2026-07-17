@@ -27,6 +27,12 @@ public sealed class Shift
     [Column("break_minutes")]
     public int BreakMinutes { get; set; }
 
+    [Column("scheduled_break_start")]
+    public TimeOnly? ScheduledBreakStart { get; set; }
+
+    [Column("scheduled_break_end")]
+    public TimeOnly? ScheduledBreakEnd { get; set; }
+
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 }

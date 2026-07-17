@@ -29,7 +29,7 @@ public sealed class NotificationFlowTests
         var time = new TestTimeProvider(new DateTimeOffset(2026, 7, 14, 9, 0, 0, TimeSpan.Zero));
         var notificationRepository = new NotificationRepository(context);
         var unitOfWork = new UnitOfWork(context);
-        var approval = new WebLeaveApprovalService(new LeaveRequestRepository(context), notificationRepository, new AuditTrail(context, time), unitOfWork, time);
+        var approval = new WebLeaveApprovalService(new LeaveRequestRepository(context), notificationRepository, new AuditTrail(context, time), unitOfWork, new WorkCalendarResolver(context), time);
 
         Assert.True(await approval.ReviewAsync(leave.Id, reviewer.Id, new ReviewLeaveRequestDto(true, "Uygundur")));
         var stored = await context.Notifications.SingleAsync();

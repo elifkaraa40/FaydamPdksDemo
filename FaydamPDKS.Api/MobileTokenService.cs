@@ -1,6 +1,7 @@
 using FaydamPDKS.Core.DTOs.Auth;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Core.Models;
+using FaydamPDKS.Core.Enums;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -19,7 +20,8 @@ public sealed class MobileTokenService(
     public async Task<MobileAuthResponse?> LoginAsync(MobileLoginRequest request, CancellationToken cancellationToken = default)
     {
         var user = await users.GetByEmailWithRoleAsync(request.Email.Trim().ToUpperInvariant(), cancellationToken);
-        if (user is null || !user.IsActive || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) return null;
+        if (user is null || !user.IsActive || user.AccountStatus != AccountStatus.Active
+            || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) return null;
         var issued = await IssueTokenPairAsync(user, request.DeviceName, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return issued.Response;
@@ -31,6 +33,7 @@ public sealed class MobileTokenService(
         var now = timeProvider.GetUtcNow();
         var current = await refreshTokens.GetActiveByHashAsync(Hash(refreshToken), now, cancellationToken);
         if (current is null) return null;
+        if (!current.User.IsActive || current.User.AccountStatus is AccountStatus.Rejected or AccountStatus.Suspended) return null;
 
         current.RevokedAt = now;
         var issued = await IssueTokenPairAsync(current.User, current.DeviceName, cancellationToken);
@@ -47,6 +50,13 @@ public sealed class MobileTokenService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<MobileAuthResponse> IssueForUserAsync(User user, string? deviceName, CancellationToken cancellationToken = default)
+    {
+        var issued = await IssueTokenPairAsync(user, deviceName, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return issued.Response;
+    }
+
     private async Task<(MobileAuthResponse Response, RefreshToken RefreshTokenEntity)> IssueTokenPairAsync(
         User user,
         string? deviceName,
@@ -61,6 +71,7 @@ public sealed class MobileTokenService(
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(ClaimTypes.Name, user.Name),
             new Claim(ClaimTypes.Role, user.Role?.Name ?? "Personel"),
+            new Claim("account_status", user.AccountStatus.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
         var jwt = new JwtSecurityToken(
@@ -81,7 +92,8 @@ public sealed class MobileTokenService(
 
         var response = new MobileAuthResponse(
             new JwtSecurityTokenHandler().WriteToken(jwt), plainRefreshToken, expiresAt,
-            new MobileUserDto(user.Id, user.Name, user.Email, user.Role?.Name ?? "Personel", user.ProfileImageUrl));
+            new MobileUserDto(user.Id, user.Name, user.Email, user.Role?.Name ?? "Personel", user.ProfileImageUrl,
+                user.AccountStatus.ToString(), user.PhoneNumber));
         return (response, refreshTokenEntity);
     }
 

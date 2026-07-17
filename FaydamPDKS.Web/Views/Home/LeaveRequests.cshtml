@@ -29,9 +29,9 @@
                     var statusClass = item.Status switch { LeaveRequestStatus.Approved => "success", LeaveRequestStatus.Rejected => "danger", LeaveRequestStatus.Cancelled => "neutral", _ => "warning" };
                     <tr>
                         <td><strong>@item.EmployeeName</strong><small>@item.Reason</small></td>
-                        <td>@item.LeaveType <small>@item.CalendarDayCount takvim günü</small></td>
+                        <td>@FaydamPDKS.Core.LeaveLabels.Type(item.LeaveType)<small>@item.CalendarDayCount takvim günü · @item.WorkDayCount.ToString("0.#") iş günü · @FaydamPDKS.Core.LeaveLabels.Portion(item.DayPortion)</small></td>
                         <td>@item.StartDate.ToString("dd.MM.yyyy")<small>@item.EndDate.ToString("dd.MM.yyyy") tarihine kadar</small></td>
-                        <td><span class="status @statusClass">@item.Status</span></td>
+                        <td><span class="status @statusClass">@FaydamPDKS.Core.LeaveLabels.Status(item.Status)</span></td>
                         <td class="text-end">
                         @if (item.Status == LeaveRequestStatus.Pending)
                         {

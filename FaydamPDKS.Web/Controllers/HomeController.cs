@@ -24,7 +24,7 @@ public sealed class HomeController(
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         if (!User.IsInRole("Yonetici"))
-            return RedirectToAction(nameof(Account), new { section = "personal" });
+            return RedirectToAction("Index", "MyWork");
 
         return View(await dashboard.GetAsync(cancellationToken));
     }
@@ -190,6 +190,21 @@ public sealed class HomeController(
         TempData["Success"] = language == "en" ? "Preferences saved." : "Tercihleriniz kaydedildi.";
         var returnSection = model.ReturnSection == "notifications" ? "notifications" : "appearance";
         return RedirectToAction(nameof(Account), new { section = returnSection });
+    }
+
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> MarkNotificationRead(Guid id, string? returnUrl, CancellationToken cancellationToken)
+    {
+        if (!TryUserId(out var userId)) return Challenge();
+        var notification = await notifications.GetForUserByIdAsync(userId, id, cancellationToken);
+        if (notification is null) return NotFound();
+        if (!notification.ReadAt.HasValue)
+        {
+            notification.ReadAt = TimeProvider.System.GetUtcNow();
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        return IsLocal(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToAction(nameof(Index));
     }
 
     [Authorize]

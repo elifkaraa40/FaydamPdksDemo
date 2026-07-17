@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FaydamPDKS.Core.DTOs;
 
-public sealed record ShiftListItemDto(Guid Id, string Name, TimeOnly StartsAt, TimeOnly EndsAt, int BreakMinutes, int LateToleranceMinutes, int EarlyLeaveToleranceMinutes, bool IsActive);
+public sealed record ShiftListItemDto(Guid Id, string Name, TimeOnly StartsAt, TimeOnly EndsAt, int BreakMinutes, TimeOnly? ScheduledBreakStart, TimeOnly? ScheduledBreakEnd, int LateToleranceMinutes, int EarlyLeaveToleranceMinutes, bool IsActive);
 public sealed record ShiftAssignmentListItemDto(Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeNumber, string ShiftName, DateOnly ValidFrom, DateOnly? ValidTo);
 public sealed record EmployeeOptionDto(Guid Id, string EmployeeNumber, string FullName);
 public sealed record ShiftAdminPageDto(IReadOnlyList<ShiftListItemDto> Shifts, IReadOnlyList<ShiftAssignmentListItemDto> Assignments, IReadOnlyList<EmployeeOptionDto> Employees);
@@ -15,6 +15,8 @@ public sealed class CreateShiftDto
     [Range(0, 240)] public int LateToleranceMinutes { get; set; } = 5;
     [Range(0, 240)] public int EarlyLeaveToleranceMinutes { get; set; } = 5;
     [Range(0, 720)] public int BreakMinutes { get; set; } = 60;
+    public TimeOnly? ScheduledBreakStart { get; set; } = new(12, 30);
+    public TimeOnly? ScheduledBreakEnd { get; set; } = new(13, 30);
 }
 
 public sealed class CreateShiftAssignmentDto

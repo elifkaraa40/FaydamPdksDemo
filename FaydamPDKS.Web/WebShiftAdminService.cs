@@ -12,7 +12,7 @@ public sealed class WebShiftAdminService(
     public async Task<ShiftAdminPageDto> GetPageAsync(CancellationToken cancellationToken = default)
     {
         var shiftItems = (await shifts.GetShiftsAsync(cancellationToken)).Select(x => new ShiftListItemDto(
-            x.Id, x.Name, x.StartsAt, x.EndsAt, x.BreakMinutes, x.LateToleranceMinutes,
+            x.Id, x.Name, x.StartsAt, x.EndsAt, x.BreakMinutes, x.ScheduledBreakStart, x.ScheduledBreakEnd, x.LateToleranceMinutes,
             x.EarlyLeaveToleranceMinutes, x.IsActive)).ToArray();
         var assignmentItems = (await shifts.GetAssignmentsAsync(cancellationToken)).Select(x => new ShiftAssignmentListItemDto(
             x.Id, x.EmployeeId, x.Employee?.Name ?? "Bilinmeyen personel", x.Employee?.EmployeeNumber ?? "—",
@@ -32,13 +32,21 @@ public sealed class WebShiftAdminService(
             : (TimeSpan.FromDays(1) - (request.StartsAt - request.EndsAt)).TotalMinutes;
         if (request.BreakMinutes >= duration)
             throw new InvalidOperationException("Mola süresi toplam vardiya süresinden kısa olmalıdır.");
+        if (request.ScheduledBreakStart.HasValue != request.ScheduledBreakEnd.HasValue)
+            throw new InvalidOperationException("Planlı mola başlangıç ve bitiş saatleri birlikte girilmelidir.");
+        if (request.ScheduledBreakStart.HasValue && request.ScheduledBreakStart >= request.ScheduledBreakEnd)
+            throw new InvalidOperationException("Planlı mola bitişi başlangıcından sonra olmalıdır.");
+        if (request.ScheduledBreakStart.HasValue && request.EndsAt > request.StartsAt &&
+            (request.ScheduledBreakStart < request.StartsAt || request.ScheduledBreakEnd > request.EndsAt))
+            throw new InvalidOperationException("Planlı mola vardiya saatleri içinde olmalıdır.");
         if (await shifts.NameExistsAsync(name, cancellationToken))
             throw new InvalidOperationException("Bu isimde bir vardiya zaten bulunuyor.");
 
         await shifts.AddShiftAsync(new Shift
         {
             Id = Guid.NewGuid(), Name = name, StartsAt = request.StartsAt, EndsAt = request.EndsAt,
-            BreakMinutes = request.BreakMinutes, LateToleranceMinutes = request.LateToleranceMinutes,
+            BreakMinutes = request.BreakMinutes, ScheduledBreakStart = request.ScheduledBreakStart,
+            ScheduledBreakEnd = request.ScheduledBreakEnd, LateToleranceMinutes = request.LateToleranceMinutes,
             EarlyLeaveToleranceMinutes = request.EarlyLeaveToleranceMinutes, IsActive = true
         }, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);

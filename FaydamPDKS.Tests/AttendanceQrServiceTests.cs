@@ -33,6 +33,78 @@ public sealed class AttendanceQrServiceTests
         Assert.Equal("Giris", log.LogType);
         Assert.Equal(zone.Id, log.ZoneId);
         Assert.Equal("MobileQr", log.Source);
+        Assert.Equal(now.UtcDateTime, log.LogDate);
+    }
+
+    [Fact]
+    public async Task Exit_without_entry_is_recorded_for_missing_entry_review()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var now = new DateTimeOffset(2026, 7, 16, 15, 0, 0, TimeSpan.Zero);
+        var (workplace, zone, employee) = await SeedAsync(context);
+        const string rawQr = "exit-without-entry";
+        context.AttendanceQrCodes.Add(new AttendanceQrCode
+        {
+            Id = Guid.NewGuid(), WorkplaceId = workplace.Id, ZoneId = zone.Id, Name = "Çıkış",
+            EventType = AttendanceEventType.Exit, TokenHash = AttendanceQrService.Hash(rawQr),
+            IsActive = true, CreatedAt = now
+        });
+        await context.SaveChangesAsync();
+
+        var result = await new AttendanceQrService(context, new TestTimeProvider(now))
+            .ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now.AddDays(-3), "exit-event"));
+
+        Assert.NotNull(result);
+        Assert.Equal("Cikis", (await context.AccessLogs.SingleAsync()).LogType);
+        Assert.Equal(now, result.OccurredAt);
+    }
+
+    [Fact]
+    public async Task Same_transition_cannot_be_scanned_twice_in_a_row()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var now = new DateTimeOffset(2026, 7, 16, 9, 0, 0, TimeSpan.Zero);
+        var (workplace, zone, employee) = await SeedAsync(context);
+        const string rawQr = "entry-qr";
+        context.AttendanceQrCodes.Add(new AttendanceQrCode
+        {
+            Id = Guid.NewGuid(), WorkplaceId = workplace.Id, ZoneId = zone.Id, Name = "Giriş",
+            EventType = AttendanceEventType.Entry, TokenHash = AttendanceQrService.Hash(rawQr),
+            IsActive = true, CreatedAt = now
+        });
+        await context.SaveChangesAsync();
+        var service = new AttendanceQrService(context, new TestTimeProvider(now));
+        await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now, "entry-1"));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now, "entry-2")));
+
+        Assert.Equal("DUPLICATE_TRANSITION", error.Message);
+        Assert.Single(context.AccessLogs);
+    }
+
+    [Fact]
+    public async Task Exit_scan_auto_closes_active_break()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var now = new DateTimeOffset(2026, 7, 16, 15, 0, 0, TimeSpan.Zero);
+        var (workplace, zone, employee) = await SeedAsync(context);
+        const string rawQr = "auto-close-exit";
+        context.AccessLogs.Add(new AccessLog { UserId = employee.Id, ZoneId = zone.Id, LogType = "Giris", LogDate = now.AddHours(-7).UtcDateTime });
+        context.BreakRecords.Add(new BreakRecord { UserId = employee.Id, StartedAt = now.AddMinutes(-15), StartDeviceEventId = "break-start" });
+        context.AttendanceQrCodes.Add(new AttendanceQrCode
+        {
+            Id = Guid.NewGuid(), WorkplaceId = workplace.Id, ZoneId = zone.Id, Name = "Çıkış",
+            EventType = AttendanceEventType.Exit, TokenHash = AttendanceQrService.Hash(rawQr), IsActive = true, CreatedAt = now
+        });
+        await context.SaveChangesAsync();
+
+        await new AttendanceQrService(context, new TestTimeProvider(now))
+            .ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now, "exit-auto-close"));
+
+        var breakRecord = await context.BreakRecords.SingleAsync();
+        Assert.Equal(now, breakRecord.EndedAt);
+        Assert.True(breakRecord.AutoClosed);
     }
 
     [Fact]

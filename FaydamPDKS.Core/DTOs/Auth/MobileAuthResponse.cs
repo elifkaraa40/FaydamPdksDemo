@@ -11,4 +11,6 @@ public sealed record MobileUserDto(
     string FullName,
     string Email,
     string Role,
-    string? ProfileImageUrl);
+    string? ProfileImageUrl,
+    string AccountStatus = "Active",
+    string? PhoneNumber = null);
