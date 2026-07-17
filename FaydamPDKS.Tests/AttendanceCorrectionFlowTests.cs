@@ -39,7 +39,7 @@ public sealed class AttendanceCorrectionFlowTests
         var review = new WebAttendanceCorrectionService(repository, new NotificationRepository(context), new AuditTrail(context, time), unitOfWork, time);
         Assert.True(await review.ReviewAsync(created.Id, reviewer.Id, new ReviewAttendanceCorrectionDto(true, "Terminal kaydı doğrulandı."), "test-trace"));
 
-        var attendance = new MobileAttendanceService(new AccessLogRepository(context), new ShiftResolver(context), repository, new WorkCalendarResolver(context), unitOfWork, config, time);
+        var attendance = new MobileAttendanceService(new AccessLogRepository(context), new ShiftResolver(context), repository, new WorkCalendarResolver(context), new BreakService(context, time), unitOfWork, config, time);
         var summary = await attendance.GetTodayAsync(employee.Id);
         Assert.Equal("Complete", summary.Status);
         Assert.Equal(480, summary.WorkedMinutes);

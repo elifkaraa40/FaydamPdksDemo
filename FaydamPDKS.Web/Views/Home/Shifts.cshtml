@@ -21,7 +21,7 @@
                 <tbody>@foreach (var item in Model.Shifts) { <tr>
                     <td><strong>@item.Name</strong></td>
                     <td>@item.StartsAt.ToString("HH:mm") – @item.EndsAt.ToString("HH:mm")<small>@(item.EndsAt <= item.StartsAt ? "Gece vardiyası" : "Gündüz vardiyası")</small></td>
-                    <td>@item.BreakMinutes dk</td><td>Geç @item.LateToleranceMinutes dk<small>Erken çıkış @item.EarlyLeaveToleranceMinutes dk</small></td>
+                    <td>@item.BreakMinutes dk<small>@(item.ScheduledBreakStart.HasValue ? $"{item.ScheduledBreakStart:HH:mm}–{item.ScheduledBreakEnd:HH:mm}" : "Saat belirtilmemiş")</small></td><td>Geç @item.LateToleranceMinutes dk<small>Erken çıkış @item.EarlyLeaveToleranceMinutes dk</small></td>
                     <td><span class="status @(item.IsActive ? "success" : "neutral")">@(item.IsActive ? "Aktif" : "Pasif")</span></td>
                 </tr> }</tbody>
             </table></div>
@@ -31,8 +31,9 @@
         <div class="panel-heading"><div><p class="eyebrow">Yeni şablon</p><h2 id="create-shift-title">Vardiya oluştur</h2></div></div>
         <form asp-action="Create" method="post" class="admin-form">
             <div class="form-field"><label for="Name">Vardiya adı</label><input id="Name" name="Name" required maxlength="100" /></div>
-            <div class="form-row"><div class="form-field"><label for="StartsAt">Başlangıç</label><input id="StartsAt" name="StartsAt" type="time" required /></div><div class="form-field"><label for="EndsAt">Bitiş</label><input id="EndsAt" name="EndsAt" type="time" required /></div></div>
+            <div class="form-row"><div class="form-field"><label for="StartsAt">Başlangıç</label><input id="StartsAt" name="StartsAt" type="time" value="08:30" required /></div><div class="form-field"><label for="EndsAt">Bitiş</label><input id="EndsAt" name="EndsAt" type="time" value="18:00" required /></div></div>
             <div class="form-field"><label for="BreakMinutes">Mola (dakika)</label><input id="BreakMinutes" name="BreakMinutes" type="number" value="60" min="0" max="720" required /></div>
+            <div class="form-row"><div class="form-field"><label for="ScheduledBreakStart">Öğle arası başlangıcı</label><input id="ScheduledBreakStart" name="ScheduledBreakStart" type="time" value="12:30" /></div><div class="form-field"><label for="ScheduledBreakEnd">Öğle arası bitişi</label><input id="ScheduledBreakEnd" name="ScheduledBreakEnd" type="time" value="13:30" /></div></div>
             <div class="form-row"><div class="form-field"><label for="LateToleranceMinutes">Geç toleransı</label><input id="LateToleranceMinutes" name="LateToleranceMinutes" type="number" value="5" min="0" max="240" required /></div><div class="form-field"><label for="EarlyLeaveToleranceMinutes">Erken çıkış toleransı</label><input id="EarlyLeaveToleranceMinutes" name="EarlyLeaveToleranceMinutes" type="number" value="5" min="0" max="240" required /></div></div>
             <button class="btn btn-primary w-100" type="submit">Vardiya oluştur</button>
         </form>

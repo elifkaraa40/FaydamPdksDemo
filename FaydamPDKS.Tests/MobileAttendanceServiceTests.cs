@@ -86,7 +86,7 @@ public sealed class MobileAttendanceServiceTests
             ["Attendance:BreakMinutes"] = "60"
         }).Build();
         return new MobileAttendanceService(
-            new AccessLogRepository(context), new ShiftResolver(context), new AttendanceCorrectionRepository(context), new WorkCalendarResolver(context), new UnitOfWork(context), config,
+            new AccessLogRepository(context), new ShiftResolver(context), new AttendanceCorrectionRepository(context), new WorkCalendarResolver(context), new BreakService(context, new TestTimeProvider(new DateTimeOffset(2026, 7, 14, 10, 0, 0, TimeSpan.Zero))), new UnitOfWork(context), config,
             new TestTimeProvider(new DateTimeOffset(2026, 7, 14, 10, 0, 0, TimeSpan.Zero)));
     }
 }

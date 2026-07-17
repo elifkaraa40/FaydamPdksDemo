@@ -73,14 +73,20 @@
         {
             <header class="account-heading"><p class="eyebrow">@(en ? "Account protection" : "Hesap koruması")</p><h1>@(en ? "Security" : "Güvenlik")</h1><p>@(en ? "Manage your password and current access." : "Parolanızı ve mevcut erişiminizi yönetin.")</p></header>
             <section class="account-section panel">
-                <div class="account-section-heading"><span>01</span><div><h2>@(en ? "Change password" : "Parola değiştir")</h2><p>@(en ? "Use at least 6 characters" : "En az 6 karakter kullanın")</p></div></div>
+                <div class="account-section-heading"><span>01</span><div><h2>@(en ? "Change password" : "Parola değiştir")</h2><p>@(en ? "Use at least 8 characters" : "En az 8 karakter kullanın")</p></div></div>
                 <form asp-action="ChangePassword" method="post" class="security-form">
                     <div class="form-field"><label for="CurrentPassword">@(en ? "Current password" : "Mevcut parola")</label><div class="password-field"><input id="CurrentPassword" name="CurrentPassword" type="password" required autocomplete="current-password" /><button class="password-toggle" type="button" data-password-toggle aria-label="@(en ? "Show password" : "Parolayı göster")" aria-pressed="false"><svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg><svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.1A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.1 2.8M6.5 6.6C3.9 8.3 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div></div>
                     <div class="form-field"><label for="NewPassword">@(en ? "New password" : "Yeni parola")</label><div class="password-field"><input id="NewPassword" name="NewPassword" type="password" required minlength="6" autocomplete="new-password" /><button class="password-toggle" type="button" data-password-toggle aria-label="@(en ? "Show password" : "Parolayı göster")" aria-pressed="false"><svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg><svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.1A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.1 2.8M6.5 6.6C3.9 8.3 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div></div>
                     <div class="form-field"><label for="ConfirmPassword">@(en ? "Confirm password" : "Yeni parolayı doğrulayın")</label><div class="password-field"><input id="ConfirmPassword" name="ConfirmPassword" type="password" required minlength="6" autocomplete="new-password" /><button class="password-toggle" type="button" data-password-toggle aria-label="@(en ? "Show password" : "Parolayı göster")" aria-pressed="false"><svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg><svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.1A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.1 2.8M6.5 6.6C3.9 8.3 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div></div>
                     <div class="account-form-actions"><button class="action-button" type="submit">@(en ? "Change password" : "Parolayı değiştir")</button></div>
                 </form>
-            </section>
+</section>
+<script>
+    document.querySelectorAll('#NewPassword, #ConfirmPassword').forEach(input => {
+        input.minLength = 8;
+        input.maxLength = 72;
+    });
+</script>
             <section class="account-section panel">
                 <div class="account-section-heading"><span>02</span><div><h2>@(en ? "Active session" : "Aktif oturum")</h2><p>@(en ? "The browser you are currently using" : "Şu anda kullandığınız tarayıcı")</p></div></div>
                 <div class="session-card"><span class="session-icon">▣</span><div><strong>@(en ? "Current web session" : "Mevcut web oturumu")</strong><small>@Context.Request.Headers.UserAgent.ToString()</small></div><b>@(en ? "Active" : "Aktif")</b></div>

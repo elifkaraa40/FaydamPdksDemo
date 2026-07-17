@@ -84,6 +84,21 @@ public sealed class AttendanceCalculatorTests
         Assert.Equal(0, result.LateMinutes);
     }
 
+    [Fact]
+    public void Uses_recorded_break_duration_when_available()
+    {
+        var date = new DateOnly(2026, 7, 14);
+        var events = new[] { Event(date, 9, 0, AttendanceEventType.Entry), Event(date, 18, 0, AttendanceEventType.Exit) };
+
+        var result = _calculator.Calculate(date,
+            new ShiftDefinition(new TimeOnly(9, 0), new TimeOnly(18, 0), breakMinutes: 60),
+            events, Istanbul, actualBreakMinutes: 30);
+
+        Assert.Equal(450, result.WorkedMinutes);
+        Assert.Equal(480, result.ExpectedMinutes);
+        Assert.Equal(0, result.OvertimeMinutes);
+    }
+
     private static AttendanceEvent Event(DateOnly date, int hour, int minute, AttendanceEventType type)
     {
         var local = date.ToDateTime(new TimeOnly(hour, minute), DateTimeKind.Unspecified);

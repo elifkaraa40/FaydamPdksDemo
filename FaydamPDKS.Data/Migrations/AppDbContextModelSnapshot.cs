@@ -76,9 +76,28 @@ namespace FaydamPDKS.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int>("CorrectionType")
+                        .HasColumnType("integer")
+                        .HasColumnName("correction_type");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("customer_name");
+
+                    b.Property<string>("FieldAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("field_address");
+
+                    b.Property<string>("ProjectName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("project_name");
 
                     b.Property<string>("Reason")
                         .IsRequired()
@@ -311,6 +330,54 @@ namespace FaydamPDKS.Data.Migrations
                     b.ToTable("audit_logs");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.BreakRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AutoClosed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_closed");
+
+                    b.Property<string>("EndDeviceEventId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("end_device_event_id");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<string>("StartDeviceEventId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("start_device_event_id");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EndDeviceEventId")
+                        .IsUnique()
+                        .HasFilter("end_device_event_id IS NOT NULL");
+
+                    b.HasIndex("StartDeviceEventId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "EndedAt");
+
+                    b.ToTable("break_records");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.Department", b =>
                 {
                     b.Property<Guid>("Id")
@@ -378,6 +445,102 @@ namespace FaydamPDKS.Data.Migrations
                     b.ToTable("employee_shift_assignments");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.FieldWorkRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("customer_name");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<string>("FieldAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("field_address");
+
+                    b.Property<string>("ProjectName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("project_name");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<int>("RecurrenceType")
+                        .HasColumnType("integer")
+                        .HasColumnName("recurrence_type");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("review_note");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "StartDate", "EndDate", "Status");
+
+                    b.ToTable("field_work_requests");
+                });
+
+            modelBuilder.Entity("FaydamPDKS.Core.Models.FieldWorkRequestDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer")
+                        .HasColumnName("day_of_week");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("request_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId", "DayOfWeek")
+                        .IsUnique();
+
+                    b.ToTable("field_work_request_days");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.LeaveRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -388,6 +551,10 @@ namespace FaydamPDKS.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<int>("DayPortion")
+                        .HasColumnType("integer")
+                        .HasColumnName("day_portion");
 
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date")
@@ -674,6 +841,14 @@ namespace FaydamPDKS.Data.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
+                    b.Property<TimeOnly?>("ScheduledBreakEnd")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("scheduled_break_end");
+
+                    b.Property<TimeOnly?>("ScheduledBreakStart")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("scheduled_break_start");
+
                     b.Property<TimeOnly>("StartsAt")
                         .HasColumnType("time without time zone")
                         .HasColumnName("starts_at");
@@ -692,6 +867,10 @@ namespace FaydamPDKS.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<int>("AccountStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("account_status");
 
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uuid")
@@ -765,6 +944,10 @@ namespace FaydamPDKS.Data.Migrations
                     b.HasIndex("EmployeeNumber")
                         .IsUnique();
 
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique()
+                        .HasFilter("\"PhoneNumber\" IS NOT NULL");
+
                     b.HasIndex("ProjectId");
 
                     b.HasIndex("RoleId");
@@ -810,6 +993,103 @@ namespace FaydamPDKS.Data.Migrations
                         .HasFilter("workplace_id IS NOT NULL");
 
                     b.ToTable("work_calendar_days");
+                });
+
+            modelBuilder.Entity("FaydamPDKS.Core.Models.WorkLocationAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("customer_name");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("end_date");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<Guid?>("EndedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ended_by_user_id");
+
+                    b.Property<string>("FieldAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("field_address");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("LocationType")
+                        .HasColumnType("integer")
+                        .HasColumnName("location_type");
+
+                    b.Property<string>("ProjectName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("project_name");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<int>("RecurrenceType")
+                        .HasColumnType("integer")
+                        .HasColumnName("recurrence_type");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("start_date");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "StartDate", "EndDate", "IsActive");
+
+                    b.ToTable("work_location_assignments");
+                });
+
+            modelBuilder.Entity("FaydamPDKS.Core.Models.WorkLocationAssignmentDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssignmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assignment_id");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer")
+                        .HasColumnName("day_of_week");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId", "DayOfWeek")
+                        .IsUnique();
+
+                    b.ToTable("work_location_assignment_days");
                 });
 
             modelBuilder.Entity("FaydamPDKS.Core.Models.Workplace", b =>
@@ -935,6 +1215,17 @@ namespace FaydamPDKS.Data.Migrations
                     b.Navigation("ActorUser");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.BreakRecord", b =>
+                {
+                    b.HasOne("FaydamPDKS.Core.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.Department", b =>
                 {
                     b.HasOne("FaydamPDKS.Core.Models.Workplace", "Workplace")
@@ -963,6 +1254,28 @@ namespace FaydamPDKS.Data.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("Shift");
+                });
+
+            modelBuilder.Entity("FaydamPDKS.Core.Models.FieldWorkRequest", b =>
+                {
+                    b.HasOne("FaydamPDKS.Core.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FaydamPDKS.Core.Models.FieldWorkRequestDay", b =>
+                {
+                    b.HasOne("FaydamPDKS.Core.Models.FieldWorkRequest", "Request")
+                        .WithMany("Days")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Request");
                 });
 
             modelBuilder.Entity("FaydamPDKS.Core.Models.LeaveRequest", b =>
@@ -1048,6 +1361,28 @@ namespace FaydamPDKS.Data.Migrations
                     b.Navigation("Workplace");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.WorkLocationAssignment", b =>
+                {
+                    b.HasOne("FaydamPDKS.Core.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FaydamPDKS.Core.Models.WorkLocationAssignmentDay", b =>
+                {
+                    b.HasOne("FaydamPDKS.Core.Models.WorkLocationAssignment", "Assignment")
+                        .WithMany("Days")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.Zone", b =>
                 {
                     b.HasOne("FaydamPDKS.Core.Models.Workplace", "Workplace")
@@ -1058,6 +1393,11 @@ namespace FaydamPDKS.Data.Migrations
                     b.Navigation("Workplace");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.FieldWorkRequest", b =>
+                {
+                    b.Navigation("Days");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.Project", b =>
                 {
                     b.Navigation("AssignedUsers");
@@ -1066,6 +1406,11 @@ namespace FaydamPDKS.Data.Migrations
             modelBuilder.Entity("FaydamPDKS.Core.Models.Role", b =>
                 {
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("FaydamPDKS.Core.Models.WorkLocationAssignment", b =>
+                {
+                    b.Navigation("Days");
                 });
 
             modelBuilder.Entity("FaydamPDKS.Core.Models.Workplace", b =>

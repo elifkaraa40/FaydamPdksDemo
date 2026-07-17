@@ -7,7 +7,8 @@ public sealed record CreateLeaveRequestDto(
     [EnumDataType(typeof(LeaveType))] LeaveType LeaveType,
     DateOnly StartDate,
     DateOnly EndDate,
-    [StringLength(500)] string? Reason);
+    [StringLength(500)] string? Reason,
+    LeaveDayPortion DayPortion = LeaveDayPortion.FullDay);
 
 public sealed record LeaveRequestDto(
     Guid Id,
@@ -15,6 +16,8 @@ public sealed record LeaveRequestDto(
     DateOnly StartDate,
     DateOnly EndDate,
     int CalendarDayCount,
+    double WorkDayCount,
+    LeaveDayPortion DayPortion,
     string? Reason,
     LeaveRequestStatus Status,
     DateTimeOffset CreatedAt,

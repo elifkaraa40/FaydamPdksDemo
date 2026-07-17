@@ -4,7 +4,7 @@
 }
 <section class="hero compact-hero">
     <div><p class="eyebrow">Organizasyon</p><h1>Personel yönetimi</h1><p>Personel hesaplarını, rollerini ve çalışma bilgilerini yönetin.</p></div>
-    <span class="summary-pill">@Model.Employees.Count personel</span>
+    <div class="d-flex gap-2 align-items-center"><a class="btn btn-primary" asp-controller="Registrations" asp-action="Index">Mobil kayıt onayları</a><span class="summary-pill">@Model.Employees.Count personel</span></div>
 </section>
 
 @if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
@@ -56,3 +56,12 @@
         </form>
     </aside>
 </div>
+<script>
+    const temporaryPassword = document.getElementById('TemporaryPassword');
+    if (temporaryPassword) {
+        temporaryPassword.minLength = 8;
+        temporaryPassword.maxLength = 72;
+        const help = temporaryPassword.closest('.form-field')?.querySelector('small');
+        if (help) help.textContent = 'En az 8 karakter. Güvenli kanaldan personele iletin.';
+    }
+</script>

@@ -23,6 +23,9 @@ public sealed class LeaveRequest
     [Column("end_date")]
     public DateOnly EndDate { get; set; }
 
+    [Column("day_portion")]
+    public LeaveDayPortion DayPortion { get; set; } = LeaveDayPortion.FullDay;
+
     [Column("reason"), StringLength(500)]
     public string? Reason { get; set; }
 

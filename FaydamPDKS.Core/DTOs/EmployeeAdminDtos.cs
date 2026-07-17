@@ -31,7 +31,9 @@ public sealed class CreateEmployeeDto
     [Required]
     public Guid RoleId { get; set; }
 
-    [Required, MinLength(6), DataType(DataType.Password)]
+    [Required, StringLength(FaydamPDKS.Core.Security.PasswordPolicy.MaximumLength,
+        MinimumLength = FaydamPDKS.Core.Security.PasswordPolicy.MinimumLength,
+        ErrorMessage = FaydamPDKS.Core.Security.PasswordPolicy.RequirementMessage), DataType(DataType.Password)]
     public string TemporaryPassword { get; set; } = string.Empty;
 }
 

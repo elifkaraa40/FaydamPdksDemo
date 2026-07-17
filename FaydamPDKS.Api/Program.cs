@@ -20,7 +20,9 @@ builder.Configuration.AddJsonFile(
 
 builder.Services.AddPdksData(builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddScoped<IMobileAuthService, MobileTokenService>();
+builder.Services.AddScoped<MobileTokenService>();
+builder.Services.AddScoped<IMobileAuthService>(services => services.GetRequiredService<MobileTokenService>());
+builder.Services.AddScoped<PhoneAuthService>();
 builder.Services.AddScoped<IAttendanceService, MobileAttendanceService>();
 builder.Services.AddScoped<ILeaveRequestService, MobileLeaveRequestService>();
 builder.Services.AddScoped<IMobileProfileService, MobileProfileService>();
@@ -128,6 +130,20 @@ app.Use(async (context, next) =>
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true
+        && !string.Equals(context.User.FindFirst("account_status")?.Value, "Active", StringComparison.OrdinalIgnoreCase)
+        && !context.Request.Path.StartsWithSegments("/api/v1/me/status")
+        && !context.Request.Path.StartsWithSegments("/api/v1/auth/refresh")
+        && !context.Request.Path.StartsWithSegments("/api/v1/auth/logout"))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new ApiErrorDto("ACCOUNT_PENDING", "Hesabınız yönetici onayı bekliyor.", TraceId: context.TraceIdentifier));
+        return;
+    }
+    await next();
+});
 app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();

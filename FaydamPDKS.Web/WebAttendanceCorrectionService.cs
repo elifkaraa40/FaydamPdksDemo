@@ -10,12 +10,13 @@ public sealed class WebAttendanceCorrectionService(
     INotificationRepository notifications,
     IAuditTrail auditTrail,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider) : IWebAttendanceCorrectionService
+    TimeProvider timeProvider,
+    IWorkLocationService? workLocations = null) : IWebAttendanceCorrectionService
 {
     public async Task<IReadOnlyList<AttendanceCorrectionReviewDto>> GetAllAsync(CancellationToken cancellationToken = default) =>
         (await corrections.GetAllAsync(cancellationToken)).Select(x => new AttendanceCorrectionReviewDto(x.Id, x.UserId,
             x.User.Name, x.User.EmployeeNumber, x.WorkDate, x.RequestedEntry, x.RequestedExit, x.Reason,
-            x.Status, x.CreatedAt, x.ReviewNote)).ToArray();
+            x.Status, x.CreatedAt, x.ReviewNote, x.CorrectionType, x.ProjectName, x.CustomerName, x.FieldAddress)).ToArray();
 
     public async Task<bool> ReviewAsync(Guid id, Guid reviewerId, ReviewAttendanceCorrectionDto request, string? correlationId, CancellationToken cancellationToken = default)
     {
@@ -28,6 +29,16 @@ public sealed class WebAttendanceCorrectionService(
         entity.ReviewedAt = timeProvider.GetUtcNow();
         entity.ReviewedByUserId = reviewerId;
         entity.ReviewNote = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+        if (request.Approve && entity.CorrectionType == AttendanceCorrectionType.PastFieldWork)
+        {
+            if (workLocations is null) throw new InvalidOperationException("Çalışma konumu servisi kullanılamıyor.");
+            await workLocations.CreateAssignmentAsync(new CreateWorkLocationAssignmentDto
+            {
+                UserId = entity.UserId, LocationType = WorkLocationType.Field, StartDate = entity.WorkDate, EndDate = entity.WorkDate,
+                RecurrenceType = WorkLocationRecurrenceType.EveryWorkday, Reason = entity.Reason, ProjectName = entity.ProjectName,
+                CustomerName = entity.CustomerName, FieldAddress = entity.FieldAddress
+            }, reviewerId, cancellationToken);
+        }
 
         await auditTrail.RecordAsync(reviewerId,
             request.Approve ? "AttendanceCorrection.Approved" : "AttendanceCorrection.Rejected",

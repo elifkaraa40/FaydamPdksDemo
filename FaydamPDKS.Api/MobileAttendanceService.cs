@@ -10,6 +10,7 @@ public sealed class MobileAttendanceService(
     IShiftResolver shiftResolver,
     IAttendanceCorrectionRepository corrections,
     IWorkCalendarResolver workCalendar,
+    IBreakService breaks,
     IUnitOfWork unitOfWork,
     IConfiguration configuration,
     TimeProvider timeProvider) : IAttendanceService
@@ -39,7 +40,8 @@ public sealed class MobileAttendanceService(
         var events = correction is null ? rawEvents : CorrectionEvents(employeeId, correction, timeZone);
 
         var calendar = await workCalendar.ResolveAsync(employeeId, workDate, cancellationToken);
-        var result = _calculator.Calculate(workDate, shift, events, timeZone, calendar.IsWorkingDay);
+        var breakMinutes = await GetBreakMinutesAsync(employeeId, workDate, timeZone, cancellationToken);
+        var result = _calculator.Calculate(workDate, shift, events, timeZone, calendar.IsWorkingDay, breakMinutes);
         return new TodayAttendanceDto(
             result.WorkDate,
             result.Status.ToString(),
@@ -87,7 +89,8 @@ public sealed class MobileAttendanceService(
                 ? CorrectionEvents(employeeId, correction, timeZone)
                 : events;
             var calendar = await workCalendar.ResolveAsync(employeeId, date, cancellationToken);
-            var day = _calculator.Calculate(date, shift, dayEvents, timeZone, calendar.IsWorkingDay);
+            var breakMinutes = await GetBreakMinutesAsync(employeeId, date, timeZone, cancellationToken);
+            var day = _calculator.Calculate(date, shift, dayEvents, timeZone, calendar.IsWorkingDay, breakMinutes);
             result.Add(new TodayAttendanceDto(
                 day.WorkDate, day.Status.ToString(), day.FirstEntry, day.LastExit,
                 day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes));
@@ -123,6 +126,15 @@ public sealed class MobileAttendanceService(
         configuration.GetValue("Attendance:LateToleranceMinutes", 5),
         configuration.GetValue("Attendance:EarlyLeaveToleranceMinutes", 5),
         configuration.GetValue("Attendance:BreakMinutes", 60));
+
+    private Task<int?> GetBreakMinutesAsync(Guid employeeId, DateOnly date, TimeZoneInfo timeZone, CancellationToken cancellationToken)
+    {
+        var localStart = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+        var localEnd = date.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+        return breaks.GetCompletedMinutesAsync(employeeId,
+            new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localStart, timeZone)),
+            new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localEnd, timeZone)), cancellationToken);
+    }
 
     private async Task<ShiftDefinition> ResolveShiftAsync(Guid employeeId, DateOnly workDate, CancellationToken cancellationToken) =>
         await shiftResolver.ResolveAsync(employeeId, workDate, cancellationToken) ?? CreateDefaultShift();

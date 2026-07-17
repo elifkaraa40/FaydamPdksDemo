@@ -30,7 +30,7 @@ public sealed class AttendanceReportService(
         var logs = await context.AccessLogs.AsNoTracking()
             .Where(x => employeeIds.Contains(x.UserId) && x.LogDate >= startUtc && x.LogDate < endUtc)
             .ToListAsync(cancellationToken);
-        var assignments = await context.EmployeeShiftAssignments.AsNoTracking().Include(x => x.Shift)
+        var shiftAssignments = await context.EmployeeShiftAssignments.AsNoTracking().Include(x => x.Shift)
             .Where(x => employeeIds.Contains(x.EmployeeId) && x.ValidFrom <= to && (!x.ValidTo.HasValue || x.ValidTo.Value >= from))
             .ToListAsync(cancellationToken);
         var corrections = await context.AttendanceCorrectionRequests.AsNoTracking()
@@ -38,6 +38,12 @@ public sealed class AttendanceReportService(
             .OrderByDescending(x => x.ReviewedAt).ToListAsync(cancellationToken);
         var calendarDays = await context.WorkCalendarDays.AsNoTracking()
             .Where(x => x.Date >= from && x.Date <= to).ToListAsync(cancellationToken);
+        var locationAssignments = await context.WorkLocationAssignments.AsNoTracking().Include(x => x.Days)
+            .Where(x => employeeIds.Contains(x.UserId) && x.IsActive && x.StartDate <= to && (!x.EndDate.HasValue || x.EndDate.Value >= from))
+            .ToListAsync(cancellationToken);
+        var breakRecords = await context.BreakRecords.AsNoTracking()
+            .Where(x => employeeIds.Contains(x.UserId) && x.EndedAt.HasValue && x.StartedAt >= new DateTimeOffset(startUtc) && x.StartedAt < new DateTimeOffset(endUtc))
+            .ToListAsync(cancellationToken);
 
         var fallback = new ShiftDefinition(
             TimeOnly.Parse(configuration["Attendance:DefaultShiftStart"] ?? "09:00"),
@@ -54,31 +60,59 @@ public sealed class AttendanceReportService(
         foreach (var employee in employees)
         for (var date = from; date <= to; date = date.AddDays(1))
         {
-            var assignment = assignments.Where(x => x.EmployeeId == employee.Id && x.ValidFrom <= date &&
+            var assignment = shiftAssignments.Where(x => x.EmployeeId == employee.Id && x.ValidFrom <= date &&
                 (!x.ValidTo.HasValue || x.ValidTo.Value >= date) && x.Shift!.IsActive).OrderByDescending(x => x.ValidFrom).FirstOrDefault();
             var shift = assignment?.Shift is { } assigned
                 ? new ShiftDefinition(assigned.StartsAt, assigned.EndsAt, assigned.LateToleranceMinutes, assigned.EarlyLeaveToleranceMinutes, assigned.BreakMinutes)
                 : fallback;
-            var correction = corrections.FirstOrDefault(x => x.UserId == employee.Id && x.WorkDate == date);
+            var correction = corrections.FirstOrDefault(x => x.UserId == employee.Id && x.WorkDate == date && x.CorrectionType == AttendanceCorrectionType.TimeCorrection);
+            var rawEvents = eventsByEmployee.GetValueOrDefault(employee.Id) ?? [];
             var dayEvents = correction is null
-                ? eventsByEmployee.GetValueOrDefault(employee.Id) ?? []
+                ? rawEvents
                 : CorrectionEvents(employee.Id, correction, timeZone);
             var specialDay = calendarDays.Where(x => x.Date == date && (x.WorkplaceId == employee.WorkplaceId || x.WorkplaceId == null))
                 .OrderByDescending(x => x.WorkplaceId.HasValue).FirstOrDefault();
             var isWorkingDay = specialDay is not null
                 ? specialDay.DayType == CalendarDayType.WorkingDayOverride
                 : date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
-            var day = _calculator.Calculate(date, shift, dayEvents, timeZone, isWorkingDay);
+            var dayStartLocal = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+            var dayEndLocal = date.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+            var dayStartUtc = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(dayStartLocal, timeZone));
+            var dayEndUtc = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(dayEndLocal, timeZone));
+            var employeeBreaks = breakRecords.Where(x => x.UserId == employee.Id && x.StartedAt >= dayStartUtc && x.StartedAt < dayEndUtc).ToArray();
+            int? actualBreakMinutes = employeeBreaks.Length == 0 ? null : employeeBreaks.Sum(x => Math.Max(0, (int)(x.EndedAt!.Value - x.StartedAt).TotalMinutes));
+            var day = _calculator.Calculate(date, shift, dayEvents, timeZone, isWorkingDay, actualBreakMinutes);
             var calendarLabel = specialDay?.Name ?? (!isWorkingDay ? "Hafta tatili" : null);
+            var hasActualQr = rawEvents.Any(x => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(x.OccurredAt, timeZone).DateTime) == date);
+            var location = locationAssignments.Where(x => x.UserId == employee.Id && x.StartDate <= date && (!x.EndDate.HasValue || x.EndDate >= date)
+                    && WorkLocationService.Applies(x.RecurrenceType, x.Days.Select(d => d.DayOfWeek), date))
+                .OrderByDescending(x => x.LocationType == WorkLocationType.Field).ThenByDescending(x => x.CreatedAt).FirstOrDefault();
+            if (isWorkingDay && !hasActualQr && correction is null && location is not null)
+            {
+                var expected = ExpectedMinutes(shift);
+                rows.Add(new AttendanceReportRowDto(employee.Id, employee.EmployeeNumber, employee.Name, employee.Department?.Name ?? employee.DepartmentLegacy,
+                    date, assignment?.Shift?.Name ?? "Varsayılan vardiya", location.LocationType == WorkLocationType.Field ? AttendanceStatus.FieldWork.ToString() : AttendanceStatus.RemoteWork.ToString(),
+                    null, null, expected, expected, 0, 0, location.LocationType.ToString(), "WorkLocationPlan", true,
+                    location.ProjectName ?? location.CustomerName ?? location.Reason));
+                continue;
+            }
             rows.Add(new AttendanceReportRowDto(employee.Id, employee.EmployeeNumber, employee.Name, employee.Department?.Name ?? employee.DepartmentLegacy,
                 date, calendarLabel is null ? assignment?.Shift?.Name ?? "Varsayılan vardiya" : $"{calendarLabel} · {(assignment?.Shift?.Name ?? "Varsayılan vardiya")}", day.Status.ToString(), day.FirstEntry,
-                day.LastExit, day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes));
+                day.LastExit, day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes, "Office", correction is null ? "QR" : "Correction", false, null));
         }
         return new AttendanceReportDto(from, to, rows);
     }
 
     private int ReadInt(string key, int fallback) =>
         int.TryParse(configuration[key], out var value) ? value : fallback;
+
+    private static int ExpectedMinutes(ShiftDefinition shift)
+    {
+        var start = shift.StartsAt.ToTimeSpan();
+        var end = shift.EndsAt.ToTimeSpan();
+        if (end <= start) end = end.Add(TimeSpan.FromDays(1));
+        return Math.Max(0, (int)(end - start).TotalMinutes - shift.BreakMinutes);
+    }
 
     private static AttendanceEvent[] CorrectionEvents(Guid employeeId, AttendanceCorrectionRequest correction, TimeZoneInfo timeZone)
     {

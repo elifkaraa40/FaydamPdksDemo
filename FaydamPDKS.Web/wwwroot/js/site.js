@@ -16,6 +16,46 @@ document.addEventListener("click", function (event) {
     toggle.setAttribute("aria-label", showPassword ? "Parolayı gizle" : "Parolayı göster");
 });
 
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-work-location-form]").forEach(function (form) {
+        const type = form.querySelector("[data-work-location-type]");
+        const fieldFields = form.querySelector("[data-field-work-fields]");
+        const recurrence = form.querySelector("[data-recurrence-type]");
+        const weekdayFields = form.querySelector("[data-weekday-fields]");
+        const startDate = form.querySelector("[name='StartDate']");
+        const endDate = form.querySelector("[name='EndDate']");
+        if (!type || !fieldFields) return;
+
+        function updateLocationFields() {
+            const isFieldWork = type.value === "2";
+            fieldFields.hidden = !isFieldWork;
+            fieldFields.querySelectorAll("input, textarea, select").forEach(function (control) {
+                control.disabled = !isFieldWork;
+                if (!isFieldWork) control.value = "";
+            });
+        }
+
+        type.addEventListener("change", updateLocationFields);
+        updateLocationFields();
+
+        function updateRecurrenceFields() {
+            if (!recurrence || !weekdayFields) return;
+            const selectedWeekdays = recurrence.value === "2";
+            weekdayFields.hidden = !selectedWeekdays;
+            weekdayFields.querySelectorAll("input").forEach(function (control) {
+                control.disabled = !selectedWeekdays;
+                if (!selectedWeekdays) control.checked = false;
+            });
+            if (recurrence.value === "3" && startDate && endDate && startDate.value) endDate.value = startDate.value;
+        }
+        recurrence?.addEventListener("change", updateRecurrenceFields);
+        startDate?.addEventListener("change", function () {
+            if (recurrence?.value === "3" && endDate) endDate.value = startDate.value;
+        });
+        updateRecurrenceFields();
+    });
+});
+
 document.querySelectorAll("[data-global-search]").forEach(function (search) {
     const input = search.querySelector("input[type='search']");
     const results = search.querySelector(".global-search-results");

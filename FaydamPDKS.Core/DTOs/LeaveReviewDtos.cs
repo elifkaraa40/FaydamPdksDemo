@@ -11,6 +11,8 @@ public sealed record LeaveReviewListItemDto(
     DateOnly StartDate,
     DateOnly EndDate,
     int CalendarDayCount,
+    double WorkDayCount,
+    LeaveDayPortion DayPortion,
     string? Reason,
     LeaveRequestStatus Status,
     DateTimeOffset CreatedAt,
