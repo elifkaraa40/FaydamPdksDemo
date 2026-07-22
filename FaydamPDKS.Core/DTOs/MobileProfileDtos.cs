@@ -10,7 +10,11 @@ public sealed record MobileProfileDto(
     string? PhoneNumber,
     string? ProfileImageUrl,
     bool IsEmailNotificationEnabled,
-    bool IsSmsNotificationEnabled);
+    bool IsSmsNotificationEnabled,
+    string? EmployeeNumber,
+    string? DepartmentName,
+    string? WorkplaceName,
+    DateOnly? HireDate);
 
 public sealed record UpdateMobileProfileDto(
     [StringLength(30)] string? PhoneNumber,

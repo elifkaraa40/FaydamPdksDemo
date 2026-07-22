@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IBreakService, BreakService>();
         services.AddScoped<IManagerNotificationService, ManagerNotificationService>();
         services.AddScoped<IWorkLocationService, WorkLocationService>();
+        services.AddScoped<IManagerMobileService, ManagerMobileService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         return services;
     }

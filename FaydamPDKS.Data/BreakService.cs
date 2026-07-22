@@ -76,7 +76,7 @@ public sealed class BreakService(AppDbContext context, TimeProvider timeProvider
         if (user is null) return [];
         return await context.BreakRecords.AsNoTracking()
             .Where(x => x.EndedAt == null && x.UserId != userId)
-            .Where(x => user.WorkplaceId == null || x.User.WorkplaceId == user.WorkplaceId)
+            .Where(x => user.WorkplaceId != null && x.User.WorkplaceId == user.WorkplaceId)
             .OrderBy(x => x.StartedAt)
             .Select(x => new ActiveColleagueBreakDto(x.UserId, x.User.Name,
                 x.User.Department != null ? x.User.Department.Name : x.User.DepartmentLegacy, x.StartedAt))

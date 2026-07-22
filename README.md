@@ -1,5 +1,15 @@
 # Faydam PDKS
 
+## Güncel yerel API özeti
+
+API varsayılan olarak HTTP `http://localhost:5055`, HTTPS `https://localhost:7072` adreslerinde çalışır. `appsettings.Local.json` isteğe bağlıdır; parola, bağlantı dizesi ve JWT anahtarı sürüm kontrolüne yazılmaz, user-secrets veya ortam değişkeniyle sağlanır.
+
+- `GET /health/live`: süreç canlılık kontrolü
+- `GET /health/ready`: PostgreSQL hazırlık kontrolü
+- `GET /swagger/v1/swagger.json`: geliştirme ortamında paylaşılabilir OpenAPI belgesi
+
+Mobil istemci yalnızca JWT korumalı `FaydamPDKS.Api/api/v1` uçlarını kullanır. Yönetici mobil uçları onay, dashboard, personel durumu ve puantaj raporlarını kapsar.
+
 Faydam PDKS; web yönetim paneli ve mobil uygulama için ayrı API sunan, ASP.NET Core 8 ve PostgreSQL tabanlı personel devam kontrol sistemi temelidir.
 
 ## Çözüm yapısı

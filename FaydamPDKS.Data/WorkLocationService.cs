@@ -66,6 +66,15 @@ public sealed class WorkLocationService(
         EnsureEnabled(); Validate(r.StartDate, r.EndDate, r.RecurrenceType, r.Days);
         var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
         if (r.StartDate < today) throw new InvalidOperationException("Geçmiş çalışma konumu kayıtları puantaj düzeltme talebi olarak gönderilmelidir.");
+        if (r.LocationType is not (WorkLocationType.Field or WorkLocationType.Remote))
+            throw new InvalidOperationException("Talep türü Field veya Remote olmalıdır.");
+        if (await db.FieldWorkRequests.AnyAsync(x => x.UserId == userId
+                && (x.Status == WorkLocationRequestStatus.Pending || x.Status == WorkLocationRequestStatus.Approved)
+                && x.StartDate <= r.EndDate && x.EndDate >= r.StartDate, ct)
+            || await db.LeaveRequests.AnyAsync(x => x.UserId == userId
+                && (x.Status == LeaveRequestStatus.Pending || x.Status == LeaveRequestStatus.Approved)
+                && x.StartDate <= r.EndDate && x.EndDate >= r.StartDate, ct))
+            throw new InvalidOperationException("Seçilen tarih aralığında çakışan izin veya çalışma konumu kaydı var.");
         if (r.LocationType == WorkLocationType.Field && string.IsNullOrWhiteSpace(r.ProjectName))
             throw new InvalidOperationException("Saha görevi için proje bilgisi zorunludur.");
         var entity = new FieldWorkRequest { Id = Guid.NewGuid(), UserId = userId, LocationType = r.LocationType,

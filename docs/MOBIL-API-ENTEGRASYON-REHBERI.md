@@ -1,5 +1,76 @@
 # FaydamPDKS Mobil API Entegrasyon Rehberi
 
+## Yönetici mobil API sözleşmesi
+
+Bu uçların tamamı `Authorization: Bearer <token>` ister ve yalnızca `Yonetici` rolüne açıktır. Personel tokenı `403` alır. Liste yanıtları `items`, `page`, `pageSize`, `totalCount`, `totalPages` alanlarını taşır; `pageSize` en çok 100'dür.
+
+| Metot | Yol | Açıklama |
+|---|---|---|
+| `GET` | `/manager/dashboard` | Bekleyen onaylar ile bugünkü giriş, çıkış, eksik kayıt, ofis/saha/uzaktan ve mola sayıları |
+| `GET` | `/manager/approvals/summary` | Dört bekleyen onay sayısı |
+| `GET/POST` | `/manager/registrations[/{id}/review]` | Mobil hesap listesi ve kararı |
+| `GET/POST` | `/manager/leave-requests[/{id}/review]` | İzin listesi ve kararı |
+| `GET/POST` | `/manager/attendance-corrections[/{id}/review]` | Puantaj düzeltme listesi ve kararı |
+| `GET/POST` | `/manager/work-location-requests[/{id}/review]` | Saha/uzaktan çalışma listesi ve kararı |
+| `GET` | `/manager/personnel-status` | `workplaceId`, `departmentId`, `status`, `search`, `page`, `pageSize` filtreli durum |
+| `GET` | `/manager/attendance-report` | Tarih ve organizasyon filtreli, sayfalı ortak puantaj hesabı |
+| `GET` | `/manager/attendance-report/export` | `csv`, `pdf`, `xlsx` çıktısı ve denetim izi |
+
+Ortak karar gövdesi:
+
+```json
+{ "approve": true, "note": "Uygun görüldü." }
+```
+
+Kayıt onayında `employeeNumber` ve `departmentId` ayrıca gönderilebilir. Sicil numarası verilmezse sunucu benzersiz `PER-0001` biçiminde değer üretir. İkinci karar `409 REQUEST_CONFLICT` döndürür. Kararlar aktör, zaman, eski/yeni değer, varlık kimliği ve HTTP `traceId` ile denetim izine yazılır; personele bildirim oluşturulur.
+
+```json
+{
+  "pendingApprovals": { "registrations": 2, "leaveRequests": 3, "attendanceCorrections": 1, "workLocationRequests": 4 },
+  "enteredToday": 42,
+  "exitedToday": 8,
+  "missingAttendance": 3,
+  "officePersonnel": 35,
+  "fieldPersonnel": 5,
+  "remotePersonnel": 2,
+  "personnelOnBreak": 4
+}
+```
+
+Personel durum öğesi `userId`, `employeeNumber`, `fullName`, `department`, `workplace`, `attendanceStatus`, `firstEntry`, `lastExit`, `workLocation`, `isOnBreak`, `breakStartedAt`, `missingRecord` alanlarını taşır. Yönetici mola başlatamaz, bitiremez veya değiştiremez.
+
+## Yeni personel uçları
+
+- `GET /attendance/export?from=2026-07-01&to=2026-07-22&format=csv|pdf`: en çok 90 gün, gelecek tarih yok, yalnızca JWT sahibinin puantajı.
+- `GET /work-locations/today`
+- `GET /work-locations/requests`
+- `POST /work-locations/requests`
+- `DELETE /work-locations/requests/{id}`
+
+```json
+{
+  "locationType": "Remote",
+  "startDate": "2026-07-24",
+  "endDate": "2026-07-25",
+  "recurrenceType": "EveryWorkday",
+  "days": [],
+  "reason": "Planlı odak çalışması",
+  "projectName": null,
+  "customerName": null,
+  "fieldAddress": null
+}
+```
+
+`locationType` isteklerde `Field` veya `Remote` olmalıdır; `Office` bugünkü varsayılan durumdur. Durumlar `Pending`, `Approved`, `Rejected`, `Cancelled` olarak string döner. Geçmiş tarih, ters tarih aralığı ve bekleyen/onaylı izin ya da çalışma konumu çakışması reddedilir. Yalnızca bekleyen kendi talebi iptal edilebilir.
+
+`GET /breaks/active-colleagues` yalnızca `Personel` rolüne açıktır, çağıranı içermez ve aynı işyeri filtresini korur. Yönetici mola bilgisini `/manager/personnel-status` üzerinden okur.
+
+`GET /me`, mevcut alanlara ek olarak `employeeNumber`, `departmentName`, `workplaceName`, `hireDate` döndürür. `PUT /me` yalnızca telefon ve bildirim tercihlerini değiştirir.
+
+Mevcut domain modelinde güvenilir yıllık izin hakkı/bakiye kaynağı bulunmadığından `/leave-requests/summary` eklenmemiştir; kalan izin değeri uydurulmamıştır. Hak kazanma ve devir kuralları ürün kararıdır.
+
+JSON enumları string, tarihler `YYYY-MM-DD`, saatler ISO 8601 offsetli biçimdedir. CSV UTF-8 BOM taşır. Hatalar `code`, `message`, opsiyonel `errors` ve `traceId` alanlı standart `ApiErrorDto` biçimindedir.
+
 Bu belge mobil uygulama ile backend ekibinin aynı sözleşme üzerinden çalışması içindir. Mobil istemci yalnızca `FaydamPDKS.Api` projesine bağlanır; web paneline ait controller veya cookie oturumunu kullanmaz.
 
 ## Temel adres ve sürümleme

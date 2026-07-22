@@ -17,7 +17,7 @@ public sealed class AttendanceReportService(
     public async Task<AttendanceReportDto> GetAsync(DateOnly from, DateOnly to, Guid? employeeId = null, CancellationToken cancellationToken = default)
     {
         if (from == default || to == default || from > to) throw new ArgumentException("Geçerli bir tarih aralığı seçin.");
-        if (to.DayNumber - from.DayNumber + 1 > 31) throw new ArgumentException("Rapor en fazla 31 günlük alınabilir.");
+        if (to.DayNumber - from.DayNumber + 1 > 90) throw new ArgumentException("Rapor en fazla 90 günlük alınabilir.");
 
         var timeZone = ResolveTimeZone(configuration["Attendance:TimeZone"] ?? "Europe/Istanbul");
         var localStart = from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified).AddHours(-4);

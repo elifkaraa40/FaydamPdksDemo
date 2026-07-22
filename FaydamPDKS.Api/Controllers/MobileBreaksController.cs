@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FaydamPDKS.Api.Controllers;
 
-[ApiController, Authorize]
+[ApiController, Authorize(Roles = "Personel")]
 [Route("api/v1/breaks")]
 public sealed class MobileBreaksController(IBreakService breaks) : ControllerBase
 {
@@ -27,7 +27,7 @@ public sealed class MobileBreaksController(IBreakService breaks) : ControllerBas
     public async Task<IActionResult> History([FromQuery] DateOnly from, [FromQuery] DateOnly to, CancellationToken cancellationToken) =>
         TryUserId(out var id) ? Ok(await breaks.GetHistoryAsync(id, from, to, cancellationToken)) : UnauthorizedError();
 
-    [HttpGet("active-colleagues")]
+    [HttpGet("active-colleagues"), Authorize(Roles = "Personel")]
     public async Task<IActionResult> ActiveColleagues(CancellationToken cancellationToken) =>
         TryUserId(out var id) ? Ok(await breaks.GetActiveColleaguesAsync(id, cancellationToken)) : UnauthorizedError();
 

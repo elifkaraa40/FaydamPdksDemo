@@ -30,10 +30,10 @@ public sealed class AttendanceReportServiceTests
     }
 
     [Fact]
-    public async Task Rejects_ranges_longer_than_thirty_one_days()
+    public async Task Rejects_ranges_longer_than_ninety_days()
     {
         await using var context = TestInfrastructure.CreateContext();
-        await Assert.ThrowsAsync<ArgumentException>(() => CreateService(context).GetAsync(new DateOnly(2026, 1, 1), new DateOnly(2026, 2, 1)));
+        await Assert.ThrowsAsync<ArgumentException>(() => CreateService(context).GetAsync(new DateOnly(2026, 1, 1), new DateOnly(2026, 4, 1)));
     }
 
     [Fact]

@@ -15,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddJsonFile(
     "appsettings.Local.json",
-    optional: false,
+    optional: true,
     reloadOnChange: true);
 
 builder.Services.AddPdksData(builder.Configuration);
