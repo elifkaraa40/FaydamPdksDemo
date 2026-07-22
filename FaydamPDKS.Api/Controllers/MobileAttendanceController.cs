@@ -36,7 +36,8 @@ public sealed class MobileAttendanceController(IAttendanceService attendance, IA
             {
                 "csv" => File(AttendanceExportBuilder.Csv(report), "text/csv; charset=utf-8", fileName + ".csv"),
                 "pdf" => File(AttendanceExportBuilder.Pdf(report), "application/pdf", fileName + ".pdf"),
-                _ => BadRequest(new ApiErrorDto("INVALID_FORMAT", "Format csv veya pdf olmalıdır.", TraceId: HttpContext.TraceIdentifier))
+                "xlsx" => File(AttendanceExportBuilder.Xlsx(report), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName + ".xlsx"),
+                _ => BadRequest(new ApiErrorDto("INVALID_FORMAT", "Format csv, xlsx veya pdf olmalıdır.", TraceId: HttpContext.TraceIdentifier))
             };
         }
         catch (ArgumentException ex)

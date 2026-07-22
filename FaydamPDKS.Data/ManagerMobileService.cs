@@ -128,6 +128,17 @@ public sealed class ManagerMobileService(
         entity.ReviewedAt = clock.GetUtcNow(); entity.ReviewedByUserId = managerId; entity.ReviewNote = Clean(request.Note);
         await audit.RecordAsync(managerId, request.Approve ? "LeaveRequest.Approved" : "LeaveRequest.Rejected", nameof(LeaveRequest), id.ToString(),
             new { Status = LeaveRequestStatus.Pending }, new { entity.Status, entity.ReviewedAt, entity.ReviewNote }, correlationId, ct);
+        // The original "new leave request" notification is no longer actionable
+        // once a manager has decided. Keep it in history, but do not let it
+        // appear before the approval/rejection notification in mobile.
+        var createdNotification = await db.Notifications
+            .Where(x => x.UserId == entity.UserId
+                && x.RelatedEntityId == entity.Id
+                && x.Type == NotificationType.LeaveRequestCreated
+                && !x.ReadAt.HasValue)
+            .ToListAsync(ct);
+        foreach (var notification in createdNotification)
+            notification.ReadAt = clock.GetUtcNow();
         db.Notifications.Add(NewNotification(entity.UserId, request.Approve ? NotificationType.LeaveApproved : NotificationType.LeaveRejected,
             request.Approve ? "İzin talebiniz onaylandı" : "İzin talebiniz reddedildi",
             AppendNote($"{entity.StartDate:dd.MM.yyyy} - {entity.EndDate:dd.MM.yyyy} tarihli izin talebiniz {(request.Approve ? "onaylandı" : "reddedildi")}.", request.Note), entity.Id));

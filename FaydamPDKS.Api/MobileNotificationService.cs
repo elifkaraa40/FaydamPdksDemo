@@ -1,6 +1,7 @@
 using FaydamPDKS.Core.DTOs;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Core.Models;
+using FaydamPDKS.Core.Enums;
 
 namespace FaydamPDKS.Api;
 
@@ -9,8 +10,21 @@ public sealed class MobileNotificationService(
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider) : IMobileNotificationService
 {
-    public async Task<IReadOnlyList<NotificationDto>> GetMineAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        (await notifications.GetForUserAsync(userId, 100, cancellationToken)).Select(Map).ToArray();
+    public async Task<IReadOnlyList<NotificationDto>> GetMineAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var items = await notifications.GetForUserAsync(userId, 100, cancellationToken);
+        var decidedLeaveIds = items
+            .Where(x => x.RelatedEntityId.HasValue
+                && x.Type is NotificationType.LeaveApproved or NotificationType.LeaveRejected)
+            .Select(x => x.RelatedEntityId!.Value)
+            .ToHashSet();
+        return items
+            .Where(x => !(x.Type == NotificationType.LeaveRequestCreated
+                && x.RelatedEntityId.HasValue
+                && decidedLeaveIds.Contains(x.RelatedEntityId.Value)))
+            .Select(Map)
+            .ToArray();
+    }
 
     public async Task<bool> MarkReadAsync(Guid userId, Guid notificationId, CancellationToken cancellationToken = default)
     {
