@@ -7,4 +7,5 @@ public sealed record AttendanceReportRowDto(
     string WorkLocation = "Office", string RecordSource = "QR", bool IsPlannedDuration = false,
     string? WorkLocationDetail = null);
 
-public sealed record AttendanceReportDto(DateOnly From, DateOnly To, IReadOnlyList<AttendanceReportRowDto> Rows);
+public sealed record AttendanceReportDto(DateOnly From, DateOnly To, IReadOnlyList<AttendanceReportRowDto> Rows,
+    IReadOnlyList<EmployeeOptionDto>? Employees = null, Guid? SelectedEmployeeId = null);

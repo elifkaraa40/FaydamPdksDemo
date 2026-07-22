@@ -24,7 +24,7 @@ public sealed class EmployeeAdminServiceTests
         }, Guid.NewGuid());
 
         var created = Assert.Single(context.Users);
-        Assert.Equal("PER-0042", created.EmployeeNumber);
+        Assert.Equal("PER-0001", created.EmployeeNumber);
         Assert.Equal("elif@faydam.com", created.Email);
         Assert.True(created.IsActive);
         var audit = Assert.Single(context.AuditLogs);
@@ -46,6 +46,24 @@ public sealed class EmployeeAdminServiceTests
         var actorId = Guid.NewGuid();
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CreateService(context).SetActiveAsync(actorId, false, actorId));
+    }
+
+    [Fact]
+    public async Task Delete_removes_unused_personnel_but_preserves_people_with_history()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var role = new Role { Id = Guid.NewGuid(), Name = "Personel", NormalizedName = "PERSONEL" };
+        var unused = new User { Id = Guid.NewGuid(), EmployeeNumber = "PER-10", Name = "Silinebilir", Email = "unused@test.com", RoleId = role.Id, Role = role, IsActive = true };
+        var used = new User { Id = Guid.NewGuid(), EmployeeNumber = "PER-11", Name = "Geçmişi Var", Email = "used@test.com", RoleId = role.Id, Role = role, IsActive = true };
+        context.AddRange(role, unused, used);
+        context.Permissions.Add(new Permission { UserId = used.Id, StartDate = DateTime.Today, EndDate = DateTime.Today, Reason = "Test" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        Assert.True(await service.DeleteAsync(unused.Id, Guid.NewGuid()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteAsync(used.Id, Guid.NewGuid()));
+        Assert.DoesNotContain(context.Users, x => x.Id == unused.Id);
+        Assert.Contains(context.Users, x => x.Id == used.Id);
     }
 
     private static WebEmployeeAdminService CreateService(AppDbContext context) => new(

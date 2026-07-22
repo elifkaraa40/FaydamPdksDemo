@@ -58,7 +58,7 @@ public sealed class UiTranslationMiddleware(RequestDelegate next)
         ["Geçici parola"] = "Temporary password", ["En az 8 karakter. Güvenli kanaldan personele iletin."] = "At least 8 characters. Share it with the employee through a secure channel.",
         ["Personel oluştur"] = "Create employee", ["Personeli düzenle"] = "Edit employee", ["Kimlik, organizasyon ve rol bilgilerini güncelleyin."] = "Update identity, organization and role information.",
         ["Listeye dön"] = "Back to list", ["Vazgeç"] = "Cancel", ["Değişiklikleri kaydet"] = "Save changes",
-        ["Mobil Kayıt Onayları"] = "Mobile Registration Approvals", ["Telefon ve parolayla kayıt olan yeni çalışanları personel bilgileriyle eşleştirin."] = "Match employees who registered with a phone number and password to their personnel information.",
+        ["Mobil Kayıt Onayları"] = "Mobile Registration Approvals", ["E-posta ve parolayla kayıt olan yeni çalışanları personel bilgileriyle eşleştirin."] = "Match employees who registered with an email address and password to their personnel information.",
         ["Bekleyen kayıt yok"] = "No pending registrations", ["Yeni mobil kayıtlar burada görünecek."] = "New mobile registrations will appear here.",
         ["Telefon"] = "Phone", ["Personel no"] = "Employee no.", ["Departman"] = "Department", ["Departman seçilmedi"] = "No department selected",
         ["Bu kaydı reddetmek istiyor musunuz?"] = "Do you want to reject this registration?", ["Örn."] = "E.g.",

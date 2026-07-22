@@ -1,8 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using FaydamPDKS.Core.Enums;
 
 namespace FaydamPDKS.Web.Models;
 
-public sealed record AccountNotificationItem(string Title, string Message, DateTimeOffset CreatedAt, bool IsRead);
+public sealed record AccountNotificationItem(Guid Id, NotificationType Type, string Title, string Message, DateTimeOffset CreatedAt, bool IsRead);
 
 public sealed record AccountViewModel(
     string ActiveSection,

@@ -27,7 +27,7 @@
             </table></div>
         }
     </section>
-    <aside class="panel create-panel" aria-labelledby="create-shift-title">
+    <aside class="panel create-panel" id="create-shift" aria-labelledby="create-shift-title">
         <div class="panel-heading"><div><p class="eyebrow">Yeni şablon</p><h2 id="create-shift-title">Vardiya oluştur</h2></div></div>
         <form asp-action="Create" method="post" class="admin-form">
             <div class="form-field"><label for="Name">Vardiya adı</label><input id="Name" name="Name" required maxlength="100" /></div>
@@ -48,7 +48,7 @@
             @foreach (var item in Model.Assignments) { <tr><td><strong>@item.EmployeeName</strong><small>@item.EmployeeNumber</small></td><td>@item.ShiftName</td><td>@item.ValidFrom.ToString("dd.MM.yyyy")</td><td>@(item.ValidTo?.ToString("dd.MM.yyyy") ?? "Süresiz")</td></tr> }
         </tbody></table></div> }
     </section>
-    <aside class="panel create-panel" aria-labelledby="assign-shift-title">
+    <aside class="panel create-panel" id="assign-shift" aria-labelledby="assign-shift-title">
         <div class="panel-heading"><div><p class="eyebrow">Yeni atama</p><h2 id="assign-shift-title">Personele vardiya ata</h2></div></div>
         <form asp-action="Assign" method="post" class="admin-form">
             <div class="form-field"><label for="EmployeeId">Personel</label><select id="EmployeeId" name="EmployeeId" required><option value="">Personel seçin</option>@foreach (var employee in Model.Employees) { <option value="@employee.Id">@employee.EmployeeNumber · @employee.FullName</option> }</select></div>

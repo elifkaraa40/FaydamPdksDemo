@@ -70,24 +70,21 @@
                         }
                         else
                         {
-                            <li class="nav-item"><a class="nav-link @(currentController == "MyWork" && currentAction == "FieldWork" ? "active" : null)" asp-controller="MyWork" asp-action="FieldWork">Saha Görevlerim</a></li>
+                            <li class="nav-item"><a class="nav-link @(currentController == "MyWork" && currentAction == "FieldWork" ? "active" : null)" asp-controller="MyWork" asp-action="FieldWork">Çalışma Konumlarım</a></li>
                             <li class="nav-item"><a class="nav-link @(currentController == "MyWork" && currentAction == "Records" ? "active" : null)" asp-controller="MyWork" asp-action="Records">Çalışma Kayıtlarım</a></li>
                             <li class="nav-item"><a class="nav-link @(currentController == "MyWork" && currentAction == "Leaves" ? "active" : null)" asp-controller="MyWork" asp-action="Leaves">İzinlerim</a></li>
                             <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Account" asp-route-section="notifications">Bildirimlerim</a></li>
                         }
                     </ul>
                     <div class="user-menu navbar-tools">
-                        @if (User.IsInRole("Yonetici"))
-                        {
-                            <div class="global-search" data-global-search data-search-url="@Url.Action("Search", "Home")">
+                        <div class="global-search" data-global-search data-search-url="@Url.Action("Search", "Home")" data-search-scope="@(User.IsInRole("Yonetici") ? "manager" : "personal")">
                                 <label class="navbar-search">
                                     <span class="visually-hidden">Genel arama</span>
-                                    <input type="search" placeholder="Personel veya sayfa ara" aria-label="Personel veya sayfa ara" autocomplete="off" aria-expanded="false" aria-controls="global-search-results" />
+                                    <input type="search" placeholder="@(User.IsInRole("Yonetici") ? "Personel veya sayfa ara" : "Sayfa ara")" aria-label="@(User.IsInRole("Yonetici") ? "Personel veya sayfa ara" : "Sayfa ara")" autocomplete="off" aria-expanded="false" aria-controls="global-search-results" />
                                     <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m21 21-4.2-4.2m1.2-5.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" /></svg>
                                 </label>
                                 <div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
-                            </div>
-                        }
+                        </div>
                         <a class="navbar-icon-link @(unreadNotificationCount > 0 ? "has-notifications" : null)" asp-controller="Home" asp-action="Account" asp-route-section="notifications" aria-label="@unreadNotificationCount okunmamış bildirim" title="Bildirimler">
                             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4" /></svg>
                             @if (unreadNotificationCount > 0) { <span class="navbar-notification-badge">@unreadNotificationCount</span> }
@@ -155,8 +152,8 @@
                 @foreach (var item in layoutNotificationItems.Take(3))
                 {
                     var isManagerNotice = User.IsInRole("Yonetici");
-                    var targetController = isManagerNotice && item.Type == NotificationType.RegistrationApprovalRequested ? "Registrations" : isManagerNotice && item.Type == NotificationType.LeaveRequestCreated ? "LeaveRequests" : isManagerNotice && item.Type is NotificationType.AttendanceCorrectionCreated or NotificationType.MissingAttendanceDetected ? "AttendanceCorrections" : "MyWork";
-                    var targetAction = !isManagerNotice && item.Type is NotificationType.LeaveApproved or NotificationType.LeaveRejected ? "Leaves" : !isManagerNotice && item.Type is NotificationType.AttendanceCorrectionApproved or NotificationType.AttendanceCorrectionRejected or NotificationType.AttendanceWarning ? "Records" : "Index";
+                    var targetController = isManagerNotice && item.Type == NotificationType.RegistrationApprovalRequested ? "Registrations" : isManagerNotice && item.Type == NotificationType.LeaveRequestCreated ? "LeaveRequests" : isManagerNotice && item.Type is NotificationType.AttendanceCorrectionCreated or NotificationType.MissingAttendanceDetected ? "AttendanceCorrections" : isManagerNotice && item.Type == NotificationType.FieldWorkRequestCreated ? "WorkLocations" : "MyWork";
+                    var targetAction = !isManagerNotice && item.Type is NotificationType.LeaveApproved or NotificationType.LeaveRejected ? "Leaves" : !isManagerNotice && item.Type is NotificationType.AttendanceCorrectionApproved or NotificationType.AttendanceCorrectionRejected or NotificationType.AttendanceWarning ? "Records" : !isManagerNotice && item.Type is NotificationType.FieldWorkRequestApproved or NotificationType.FieldWorkRequestRejected or NotificationType.WorkLocationAssigned ? "FieldWork" : "Index";
                     <div class="live-notification-item">
                         <span aria-hidden="true"></span><div><strong>@item.Title</strong><p>@item.Message</p></div>
                         <form asp-controller="Home" asp-action="MarkNotificationRead" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="returnUrl" value="@Url.Action(targetAction, targetController)" /><button type="submit">Görüntüle ve kapat</button></form>

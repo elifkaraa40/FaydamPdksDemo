@@ -34,7 +34,7 @@ public sealed class MyWorkController(
     public async Task<IActionResult> CreateFieldWork(CreateFieldWorkRequestDto request, CancellationToken cancellationToken)
     {
         if (!TryUserId(out var userId)) return Challenge();
-        try { await workLocations.CreateFieldRequestAsync(userId, request, cancellationToken); TempData["Success"] = "Saha görevi talebiniz yöneticiye gönderildi."; }
+        try { await workLocations.CreateFieldRequestAsync(userId, request, cancellationToken); TempData["Success"] = "Çalışma konumu talebiniz yöneticiye gönderildi."; }
         catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
         return RedirectToAction(nameof(FieldWork));
     }
@@ -80,14 +80,34 @@ public sealed class MyWorkController(
     {
         if (!TryUserId(out var userId)) return Challenge();
         var range = ResolveRange(from, to);
-        var rows = (await attendanceReports.GetAsync(range.From, range.To, cancellationToken)).Rows
-            .Where(x => x.EmployeeId == userId).ToArray();
+        var rows = (await GetMyReportAsync(userId, range.From, range.To, cancellationToken)).Rows;
         var csv = new StringBuilder("Tarih;Vardiya;Durum;İlk Giriş;Son Çıkış;Çalışılan Dakika;Beklenen Dakika;Geç Dakika;Fazla Mesai Dakika\r\n");
         foreach (var row in rows)
             csv.AppendJoin(';', row.WorkDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture), Csv(row.ShiftName), Csv(StatusLabel(row.Status)),
                 Time(row.FirstEntry), Time(row.LastExit), row.WorkedMinutes, row.ExpectedMinutes, row.LateMinutes, row.OvertimeMinutes).Append("\r\n");
         return File(new UTF8Encoding(true).GetBytes(csv.ToString()), "text/csv; charset=utf-8",
             $"puantajim-{range.From:yyyyMMdd}-{range.To:yyyyMMdd}.csv");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportExcel(DateOnly? from, DateOnly? to, CancellationToken cancellationToken)
+    {
+        if (!TryUserId(out var userId)) return Challenge();
+        var range = ResolveRange(from, to);
+        var report = await GetMyReportAsync(userId, range.From, range.To, cancellationToken);
+        return File(AttendanceReportFileBuilder.Excel(report),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"puantajim-{range.From:yyyyMMdd}-{range.To:yyyyMMdd}.xlsx");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportPdf(DateOnly? from, DateOnly? to, CancellationToken cancellationToken)
+    {
+        if (!TryUserId(out var userId)) return Challenge();
+        var range = ResolveRange(from, to);
+        var report = await GetMyReportAsync(userId, range.From, range.To, cancellationToken);
+        return File(AttendanceReportFileBuilder.Pdf(report), "application/pdf",
+            $"puantajim-{range.From:yyyyMMdd}-{range.To:yyyyMMdd}.pdf");
     }
 
     [HttpPost]
@@ -174,9 +194,15 @@ public sealed class MyWorkController(
         return RedirectToAction(nameof(Records));
     }
 
+    private async Task<AttendanceReportDto> GetMyReportAsync(Guid userId, DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        var report = await attendanceReports.GetAsync(from, to, cancellationToken: cancellationToken);
+        return new AttendanceReportDto(from, to, report.Rows.Where(x => x.EmployeeId == userId).ToArray());
+    }
+
     private async Task<MyWorkViewModel> BuildModelAsync(Guid userId, DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
-        var attendance = (await attendanceReports.GetAsync(from, to, cancellationToken)).Rows
+        var attendance = (await attendanceReports.GetAsync(from, to, cancellationToken: cancellationToken)).Rows
             .Where(x => x.EmployeeId == userId).ToArray();
         var breakHistory = await breaks.GetHistoryAsync(userId, from, to, cancellationToken);
         var leaves = await leaveRequests.GetForUserAsync(userId, cancellationToken);

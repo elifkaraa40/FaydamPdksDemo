@@ -10,6 +10,19 @@ public sealed class WorkLocationsController(IWorkLocationService service) : Cont
  [HttpGet] public async Task<IActionResult> Index(CancellationToken ct)=>View(await service.GetManagementPageAsync(ct));
  [HttpPost] public async Task<IActionResult> Create(CreateWorkLocationAssignmentDto r,CancellationToken ct){if(!UserId(out var actor))return Challenge();try{await service.CreateAssignmentAsync(r,actor,ct);TempData["Success"]="Çalışma konumu planı oluşturuldu.";}catch(InvalidOperationException ex){TempData["Error"]=ex.Message;}return RedirectToAction(nameof(Index));}
  [HttpPost] public async Task<IActionResult> End(Guid id,CancellationToken ct){if(!UserId(out var actor))return Challenge();if(!await service.EndAssignmentAsync(id,actor,ct))return NotFound();TempData["Success"]="Plan sonlandırıldı.";return RedirectToAction(nameof(Index));}
- [HttpPost] public async Task<IActionResult> Review(Guid id,bool approve,string? note,CancellationToken ct){if(!UserId(out var actor))return Challenge();try{if(!await service.ReviewFieldRequestAsync(id,actor,approve,note,ct))return NotFound();TempData["Success"]=approve?"Saha görevi onaylandı.":"Saha görevi reddedildi.";}catch(InvalidOperationException ex){TempData["Error"]=ex.Message;}return RedirectToAction(nameof(Index));}
+ [HttpPost]
+ public async Task<IActionResult> Review(Guid id, bool approve, string? note, CancellationToken ct)
+ {
+  if(!UserId(out var actor)) return Challenge();
+  try
+  {
+   var request = (await service.GetManagementPageAsync(ct)).Requests.FirstOrDefault(x => x.Id == id);
+   if(request is null || !await service.ReviewFieldRequestAsync(id, actor, approve, note, ct)) return NotFound();
+   var locationLabel = request.LocationType == FaydamPDKS.Core.Enums.WorkLocationType.Field ? "Saha görevi" : "Uzaktan çalışma";
+   TempData["Success"] = $"{locationLabel} talebi {(approve ? "onaylandı" : "reddedildi")}.";
+  }
+  catch(InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+  return RedirectToAction(nameof(Index));
+ }
  private bool UserId(out Guid id)=>Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier),out id);
 }

@@ -7,7 +7,12 @@ using Microsoft.Extensions.Configuration;
 
 namespace FaydamPDKS.Data;
 
-public sealed class WorkLocationService(AppDbContext db, IConfiguration configuration, TimeProvider clock) : IWorkLocationService
+public sealed class WorkLocationService(
+    AppDbContext db,
+    IConfiguration configuration,
+    TimeProvider clock,
+    IManagerNotificationService managerNotifications,
+    INotificationRepository notifications) : IWorkLocationService
 {
     public bool FeatureEnabled => !bool.TryParse(configuration["Features:WorkLocations"], out var enabled) || enabled;
 
@@ -53,14 +58,29 @@ public sealed class WorkLocationService(AppDbContext db, IConfiguration configur
 
     public async Task CreateFieldRequestAsync(Guid userId, CreateFieldWorkRequestDto r, CancellationToken ct = default)
     {
+        if (r.StartDate == r.EndDate)
+        {
+            r.RecurrenceType = WorkLocationRecurrenceType.Once;
+            r.Days = [];
+        }
         EnsureEnabled(); Validate(r.StartDate, r.EndDate, r.RecurrenceType, r.Days);
         var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
-        if (r.StartDate < today) throw new InvalidOperationException("Geçmiş saha çalışmaları puantaj düzeltme talebi olarak gönderilmelidir.");
-        var entity = new FieldWorkRequest { Id = Guid.NewGuid(), UserId = userId, StartDate = r.StartDate, EndDate = r.EndDate,
-            RecurrenceType = r.RecurrenceType, ProjectName = r.ProjectName.Trim(), CustomerName = Clean(r.CustomerName),
-            FieldAddress = Clean(r.FieldAddress), Reason = r.Reason.Trim(), Status = WorkLocationRequestStatus.Pending, CreatedAt = clock.GetUtcNow() };
+        if (r.StartDate < today) throw new InvalidOperationException("Geçmiş çalışma konumu kayıtları puantaj düzeltme talebi olarak gönderilmelidir.");
+        if (r.LocationType == WorkLocationType.Field && string.IsNullOrWhiteSpace(r.ProjectName))
+            throw new InvalidOperationException("Saha görevi için proje bilgisi zorunludur.");
+        var entity = new FieldWorkRequest { Id = Guid.NewGuid(), UserId = userId, LocationType = r.LocationType,
+            StartDate = r.StartDate, EndDate = r.EndDate, RecurrenceType = r.RecurrenceType,
+            ProjectName = r.LocationType == WorkLocationType.Field ? Clean(r.ProjectName) : null,
+            CustomerName = r.LocationType == WorkLocationType.Field ? Clean(r.CustomerName) : null,
+            FieldAddress = r.LocationType == WorkLocationType.Field ? Clean(r.FieldAddress) : null,
+            Reason = r.Reason.Trim(), Status = WorkLocationRequestStatus.Pending, CreatedAt = clock.GetUtcNow() };
         foreach (var day in NormalizeDays(r.RecurrenceType, r.Days)) entity.Days.Add(new() { Id = Guid.NewGuid(), DayOfWeek = day });
-        db.FieldWorkRequests.Add(entity); await db.SaveChangesAsync(ct);
+        db.FieldWorkRequests.Add(entity);
+        var locationLabel = r.LocationType == WorkLocationType.Field ? "saha görevi" : "uzaktan çalışma";
+        var requesterName = await db.Users.AsNoTracking().Where(x => x.Id == userId).Select(x => x.Name).SingleAsync(ct);
+        await managerNotifications.NotifyAsync(NotificationType.FieldWorkRequestCreated, "Yeni çalışma konumu talebi",
+            $"{requesterName}, {r.StartDate:dd.MM.yyyy} - {r.EndDate:dd.MM.yyyy} tarihleri için {locationLabel} talebi oluşturdu.", entity.Id, ct);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<bool> CancelFieldRequestAsync(Guid id, Guid userId, CancellationToken ct = default)
@@ -78,12 +98,22 @@ public sealed class WorkLocationService(AppDbContext db, IConfiguration configur
         entity.ReviewedByUserId = reviewerId; entity.ReviewedAt = clock.GetUtcNow(); entity.ReviewNote = Clean(note);
         if (approve)
         {
-            var dto = new CreateWorkLocationAssignmentDto { UserId = entity.UserId, LocationType = WorkLocationType.Field,
+            var dto = new CreateWorkLocationAssignmentDto { UserId = entity.UserId, LocationType = entity.LocationType,
                 StartDate = entity.StartDate, EndDate = entity.EndDate, RecurrenceType = entity.RecurrenceType,
                 Days = entity.Days.Select(x => x.DayOfWeek).ToArray(), Reason = entity.Reason, ProjectName = entity.ProjectName,
                 CustomerName = entity.CustomerName, FieldAddress = entity.FieldAddress };
             await CreateAssignmentAsync(dto, reviewerId, ct);
         }
+        var locationLabel = entity.LocationType == WorkLocationType.Field ? "Saha görevi" : "Uzaktan çalışma";
+        await notifications.AddAsync(new Notification
+        {
+            UserId = entity.UserId,
+            Type = approve ? NotificationType.FieldWorkRequestApproved : NotificationType.FieldWorkRequestRejected,
+            Title = approve ? $"{locationLabel} talebiniz onaylandı" : $"{locationLabel} talebiniz reddedildi",
+            Message = $"{entity.StartDate:dd.MM.yyyy} - {entity.EndDate:dd.MM.yyyy} tarihli talebiniz {(approve ? "onaylandı" : "reddedildi")}.",
+            RelatedEntityId = entity.Id,
+            CreatedAt = clock.GetUtcNow()
+        }, ct);
         await db.SaveChangesAsync(ct); return true;
     }
 
@@ -107,5 +137,5 @@ public sealed class WorkLocationService(AppDbContext db, IConfiguration configur
         recurrence == WorkLocationRecurrenceType.SelectedWeekdays ? (days ?? []).Where(x => x is not DayOfWeek.Saturday and not DayOfWeek.Sunday).Distinct().ToArray() : [];
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static WorkLocationAssignmentDto Map(WorkLocationAssignment x) => new(x.Id, x.UserId, x.User.Name, x.LocationType, x.StartDate, x.EndDate, x.RecurrenceType, x.Days.Select(d => d.DayOfWeek).ToArray(), x.Reason, x.ProjectName, x.CustomerName, x.FieldAddress, x.IsActive);
-    private static FieldWorkRequestDto Map(FieldWorkRequest x) => new(x.Id, x.UserId, x.User.Name, x.StartDate, x.EndDate, x.RecurrenceType, x.Days.Select(d => d.DayOfWeek).ToArray(), x.ProjectName, x.CustomerName, x.FieldAddress, x.Reason, x.Status, x.CreatedAt, x.ReviewNote);
+    private static FieldWorkRequestDto Map(FieldWorkRequest x) => new(x.Id, x.UserId, x.User.Name, x.LocationType, x.StartDate, x.EndDate, x.RecurrenceType, x.Days.Select(d => d.DayOfWeek).ToArray(), x.ProjectName, x.CustomerName, x.FieldAddress, x.Reason, x.Status, x.CreatedAt, x.ReviewNote);
 }

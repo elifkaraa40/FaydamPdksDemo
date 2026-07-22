@@ -1,6 +1,7 @@
 using FaydamPDKS.Core.DTOs;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Core.Models;
+using FaydamPDKS.Core.Security;
 
 namespace FaydamPDKS.Api;
 
@@ -16,7 +17,10 @@ public sealed class MobileProfileService(IUserRepository users, IUnitOfWork unit
     {
         var user = await users.GetByIdWithRoleAsync(userId, true, cancellationToken);
         if (user is null) return null;
-        user.PhoneNumber = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+        var phone = PhoneNumberNormalizer.NormalizeOptionalTurkishMobile(request.PhoneNumber);
+        if (phone is not null && await users.PhoneNumberExistsAsync(phone, userId, cancellationToken))
+            throw new InvalidOperationException("PHONE_ALREADY_REGISTERED");
+        user.PhoneNumber = phone;
         user.IsEmailNotificationEnabled = request.IsEmailNotificationEnabled;
         user.IsSmsNotificationEnabled = request.IsSmsNotificationEnabled;
         await unitOfWork.SaveChangesAsync(cancellationToken);

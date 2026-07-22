@@ -1,6 +1,8 @@
 @model FaydamPDKS.Core.DTOs.EmployeeAdminPageDto
+@using FaydamPDKS.Core.DTOs
 @{
     ViewData["Title"] = "Personel Yönetimi";
+    var createRequest = ViewBag.CreateRequest as CreateEmployeeDto ?? new CreateEmployeeDto();
 }
 <section class="hero compact-hero">
     <div><p class="eyebrow">Organizasyon</p><h1>Personel yönetimi</h1><p>Personel hesaplarını, rollerini ve çalışma bilgilerini yönetin.</p></div>
@@ -33,6 +35,7 @@
                             <td class="text-end"><div class="review-actions">
                                 <a class="btn btn-sm btn-light" asp-action="Edit" asp-route-id="@item.Id">Düzenle</a>
                                 <form asp-action="SetActive" method="post"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="active" value="@(!item.IsActive ? "true" : "false")" /><button class="btn btn-sm @(item.IsActive ? "btn-outline-danger" : "btn-outline-success")" type="submit">@(item.IsActive ? "Pasife al" : "Aktifleştir")</button></form>
+                                <form asp-action="Delete" method="post" onsubmit="return confirm('Bu personeli kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');"><input type="hidden" name="id" value="@item.Id" /><button class="btn btn-sm btn-danger" type="submit">Sil</button></form>
                             </div></td>
                         </tr>
                     }
@@ -42,26 +45,23 @@
         }
     </section>
 
-    <aside class="panel create-panel" aria-labelledby="create-employee-title">
+    <aside class="panel create-panel" id="create-employee" aria-labelledby="create-employee-title">
         <div class="panel-heading"><div><p class="eyebrow">Yeni kayıt</p><h2 id="create-employee-title">Personel ekle</h2></div></div>
         <form asp-action="Create" method="post" class="admin-form">
-            <div class="form-field"><label for="EmployeeNumber">Sicil numarası</label><input id="EmployeeNumber" name="EmployeeNumber" required maxlength="40" autocomplete="off" /></div>
-            <div class="form-field"><label for="FullName">Ad soyad</label><input id="FullName" name="FullName" required maxlength="100" autocomplete="name" /></div>
-            <div class="form-field"><label for="Email">Kurumsal e-posta</label><input id="Email" name="Email" type="email" required maxlength="100" autocomplete="email" /></div>
-            <div class="form-field"><label for="DepartmentId">İşyeri / bölüm</label><select id="DepartmentId" name="DepartmentId"><option value="">Bölüm seçilmedi</option>@foreach (var department in Model.Departments) { <option value="@department.Id">@department.WorkplaceName · @department.DepartmentName</option> }</select></div>
-            <div class="form-field"><label for="HireDate">İşe giriş tarihi</label><input id="HireDate" name="HireDate" type="date" /></div>
-            <div class="form-field"><label for="RoleId">Rol</label><select id="RoleId" name="RoleId" required><option value="">Rol seçin</option>@foreach (var role in Model.Roles) { <option value="@role.Id">@role.Name</option> }</select></div>
-            <div class="form-field"><label for="TemporaryPassword">Geçici parola</label><div class="password-field"><input id="TemporaryPassword" name="TemporaryPassword" type="password" required minlength="6" autocomplete="new-password" /><button class="password-toggle" type="button" data-password-toggle aria-label="Parolayı göster" aria-pressed="false"><svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg><svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.1A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.1 2.8M6.5 6.6C3.9 8.3 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div><small>En az 6 karakter. Güvenli kanaldan personele iletin.</small></div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <div class="form-field"><label>Sicil numarası</label><input value="Sistem tarafından otomatik oluşturulur" readonly aria-readonly="true" /><small>Yeni personele PER-0001 biçiminde sıradaki numara verilir.</small></div>
+            <div class="form-field"><label for="FullName">Ad soyad</label><input id="FullName" name="FullName" value="@createRequest.FullName" required maxlength="100" autocomplete="name" />@Html.ValidationMessage("FullName")</div>
+            <div class="form-field"><label for="Email">Kurumsal e-posta</label><input id="Email" name="Email" value="@createRequest.Email" type="email" required maxlength="100" autocomplete="email" />@Html.ValidationMessage("Email")</div>
+            <div class="form-field"><label for="PhoneNumber">Telefon numarası</label><input id="PhoneNumber" name="PhoneNumber" value="@createRequest.PhoneNumber" type="tel" maxlength="20" autocomplete="tel" placeholder="05xx xxx xx xx" />@Html.ValidationMessage("PhoneNumber")<small>Mobil giriş için kullanılır.</small></div>
+            <div class="form-field"><label for="DepartmentId">İşyeri / bölüm</label><select id="DepartmentId" name="DepartmentId"><option value="">Bölüm seçilmedi</option>@foreach (var department in Model.Departments) { <option value="@department.Id" selected="@(createRequest.DepartmentId == department.Id ? "selected" : null)">@department.WorkplaceName · @department.DepartmentName</option> }</select></div>
+            <div class="form-field"><label for="HireDate">İşe giriş tarihi</label><input id="HireDate" name="HireDate" value="@createRequest.HireDate?.ToString("yyyy-MM-dd")" type="date" /></div>
+            <div class="form-field"><label for="RoleId">Rol</label><select id="RoleId" name="RoleId" required><option value="">Rol seçin</option>@foreach (var role in Model.Roles) { <option value="@role.Id" selected="@(createRequest.RoleId == role.Id ? "selected" : null)">@role.Name</option> }</select>@Html.ValidationMessage("RoleId")</div>
+            <div class="form-field"><label for="TemporaryPassword">Geçici parola</label><div class="password-field"><input id="TemporaryPassword" name="TemporaryPassword" type="password" required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="temporary-password-help temporary-password-error" /><button class="password-toggle" type="button" data-password-toggle aria-label="Parolayı göster" aria-pressed="false"><svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg><svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.1A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.1 2.8M6.5 6.6C3.9 8.3 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div><span id="temporary-password-error">@Html.ValidationMessage("TemporaryPassword")</span><small id="temporary-password-help">En az 8 karakter. Güvenli kanaldan personele iletin.</small></div>
             <button class="btn btn-primary w-100" type="submit">Personel oluştur</button>
         </form>
     </aside>
 </div>
-<script>
-    const temporaryPassword = document.getElementById('TemporaryPassword');
-    if (temporaryPassword) {
-        temporaryPassword.minLength = 8;
-        temporaryPassword.maxLength = 72;
-        const help = temporaryPassword.closest('.form-field')?.querySelector('small');
-        if (help) help.textContent = 'En az 8 karakter. Güvenli kanaldan personele iletin.';
-    }
-</script>
+@if (!ViewData.ModelState.IsValid)
+{
+    <script>document.getElementById('TemporaryPassword')?.focus();</script>
+}

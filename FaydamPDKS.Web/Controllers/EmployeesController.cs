@@ -18,17 +18,20 @@ public sealed class EmployeesController(IEmployeeAdminService employees) : Contr
     {
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Personel bilgilerini kontrol edin. Geçici parola en az 8 karakter olmalıdır.";
-            return RedirectToAction(nameof(Index));
+            return await CreateFormWithErrorsAsync(request, cancellationToken);
         }
         try
         {
             if (!TryActor(out var actorId)) return Challenge();
             await employees.CreateAsync(request, actorId, HttpContext.TraceIdentifier, cancellationToken);
             TempData["Success"] = "Personel kaydı oluşturuldu.";
+            return RedirectToAction(nameof(Index));
         }
-        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
-        return RedirectToAction(nameof(Index));
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return await CreateFormWithErrorsAsync(request, cancellationToken);
+        }
     }
 
     [HttpGet]
@@ -82,5 +85,27 @@ public sealed class EmployeesController(IEmployeeAdminService employees) : Contr
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        if (!TryActor(out var actorId)) return Challenge();
+        try
+        {
+            if (!await employees.DeleteAsync(id, actorId, HttpContext.TraceIdentifier, cancellationToken)) return NotFound();
+            TempData["Success"] = "Personel kalıcı olarak silindi.";
+        }
+        catch (InvalidOperationException ex) { TempData["Error"] = ex.Message; }
+        return RedirectToAction(nameof(Index));
+    }
+
     private bool TryActor(out Guid actorId) => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out actorId);
+
+    private async Task<IActionResult> CreateFormWithErrorsAsync(CreateEmployeeDto request, CancellationToken cancellationToken)
+    {
+        // Never send a submitted password back to the browser; retain every other field.
+        request.TemporaryPassword = string.Empty;
+        ModelState.SetModelValue(nameof(CreateEmployeeDto.TemporaryPassword), string.Empty, string.Empty);
+        ViewBag.CreateRequest = request;
+        return View("~/Views/Home/Employees.cshtml", await employees.GetPageAsync(cancellationToken));
+    }
 }

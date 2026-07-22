@@ -47,8 +47,14 @@ public sealed class MobileProfileController(IMobileProfileService profiles, IPer
     public async Task<IActionResult> Update(UpdateMobileProfileDto request, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return UnauthorizedError();
-        var profile = await profiles.UpdateAsync(userId, request, cancellationToken);
-        return profile is null ? NotFound() : Ok(profile);
+        try
+        {
+            var profile = await profiles.UpdateAsync(userId, request, cancellationToken);
+            return profile is null ? NotFound() : Ok(profile);
+        }
+        catch (ArgumentException ex) { return BadRequest(new ApiErrorDto("INVALID_PHONE", ex.Message, TraceId: HttpContext.TraceIdentifier)); }
+        catch (InvalidOperationException ex) when (ex.Message == "PHONE_ALREADY_REGISTERED")
+        { return Conflict(new ApiErrorDto("PHONE_ALREADY_REGISTERED", "Bu telefon numarası başka bir hesapta kullanılıyor.", TraceId: HttpContext.TraceIdentifier)); }
     }
 
     [HttpGet("export")]

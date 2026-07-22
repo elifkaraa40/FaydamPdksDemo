@@ -22,7 +22,7 @@ builder.Services.AddPdksData(builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MobileTokenService>();
 builder.Services.AddScoped<IMobileAuthService>(services => services.GetRequiredService<MobileTokenService>());
-builder.Services.AddScoped<PhoneAuthService>();
+builder.Services.AddScoped<EmailRegistrationService>();
 builder.Services.AddScoped<IAttendanceService, MobileAttendanceService>();
 builder.Services.AddScoped<ILeaveRequestService, MobileLeaveRequestService>();
 builder.Services.AddScoped<IMobileProfileService, MobileProfileService>();
@@ -42,6 +42,16 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("flutter-web-development", policy =>
+        policy.SetIsOriginAllowed(origin =>
+            Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+            && (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)))
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -128,6 +138,7 @@ app.Use(async (context, next) =>
     await next();
 });
 app.UseRouting();
+app.UseCors("flutter-web-development");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.Use(async (context, next) =>
@@ -135,6 +146,7 @@ app.Use(async (context, next) =>
     if (context.User.Identity?.IsAuthenticated == true
         && !string.Equals(context.User.FindFirst("account_status")?.Value, "Active", StringComparison.OrdinalIgnoreCase)
         && !context.Request.Path.StartsWithSegments("/api/v1/me/status")
+        && !context.Request.Path.StartsWithSegments("/api/v1/notifications")
         && !context.Request.Path.StartsWithSegments("/api/v1/auth/refresh")
         && !context.Request.Path.StartsWithSegments("/api/v1/auth/logout"))
     {

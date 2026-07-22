@@ -29,11 +29,14 @@ public sealed class HomeController(
         return View(await dashboard.GetAsync(cancellationToken));
     }
 
-    [Authorize(Roles = "Yonetici")]
+    [Authorize]
     [HttpGet]
     public async Task<IActionResult> Search(string? q, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2)
+            return Json(Array.Empty<object>());
+
+        if (!User.IsInRole("Yonetici"))
             return Json(Array.Empty<object>());
 
         var matches = await users.SearchAsync(q, cancellationToken: cancellationToken);
@@ -76,7 +79,7 @@ public sealed class HomeController(
             user.IsSmsNotificationEnabled,
             Request.Cookies["Faydam.Theme"] is "dark" ? "dark" : "light",
             Request.Cookies["Faydam.Language"] is "en" ? "en" : "tr",
-            userNotifications.Select(item => new AccountNotificationItem(item.Title, item.Message, item.CreatedAt, item.ReadAt.HasValue)).ToArray()));
+            userNotifications.Select(item => new AccountNotificationItem(item.Id, item.Type, item.Title, item.Message, item.CreatedAt, item.ReadAt.HasValue)).ToArray()));
     }
 
     [Authorize]

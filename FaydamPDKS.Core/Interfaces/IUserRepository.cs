@@ -10,4 +10,6 @@ public interface IUserRepository : IRepository<User>
     Task<IReadOnlyList<User>> SearchAsync(string query, int take = 6, CancellationToken cancellationToken = default);
     Task<bool> EmailExistsAsync(string normalizedEmail, Guid? excludingUserId = null, CancellationToken cancellationToken = default);
     Task<bool> EmployeeNumberExistsAsync(string normalizedEmployeeNumber, Guid? excludingUserId = null, CancellationToken cancellationToken = default);
+    Task<bool> PhoneNumberExistsAsync(string normalizedPhoneNumber, Guid? excludingUserId = null, CancellationToken cancellationToken = default);
+    Task<bool> HasRelatedRecordsAsync(Guid userId, CancellationToken cancellationToken = default);
 }

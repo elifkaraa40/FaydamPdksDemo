@@ -12,6 +12,7 @@
         <div class="form-field"><label asp-for="EmployeeNumber">Sicil numarası</label><input asp-for="EmployeeNumber" /><span asp-validation-for="EmployeeNumber"></span></div>
         <div class="form-field"><label asp-for="FullName">Ad soyad</label><input asp-for="FullName" /><span asp-validation-for="FullName"></span></div>
         <div class="form-field"><label asp-for="Email">Kurumsal e-posta</label><input asp-for="Email" /><span asp-validation-for="Email"></span></div>
+        <div class="form-field"><label asp-for="PhoneNumber">Telefon numarası</label><input asp-for="PhoneNumber" type="tel" autocomplete="tel" placeholder="05xx xxx xx xx" /><span asp-validation-for="PhoneNumber"></span><small>Mobil uygulamada giriş için kullanılır.</small></div>
         <div class="form-field"><label asp-for="DepartmentId">İşyeri / bölüm</label><select asp-for="DepartmentId"><option value="">Bölüm seçilmedi</option>@foreach (var department in departments) { <option value="@department.Id">@department.WorkplaceName · @department.DepartmentName</option> }</select></div>
         <div class="form-field"><label asp-for="HireDate">İşe giriş tarihi</label><input asp-for="HireDate" type="date" /></div>
         <div class="form-field"><label asp-for="RoleId">Rol</label><select asp-for="RoleId">@foreach (var role in roles) { <option value="@role.Id">@role.Name</option> }</select></div>

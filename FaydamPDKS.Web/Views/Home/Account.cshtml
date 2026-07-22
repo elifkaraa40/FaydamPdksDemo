@@ -1,4 +1,5 @@
 @model FaydamPDKS.Web.Models.AccountViewModel
+@using FaydamPDKS.Core.Enums
 @{
     var en = Model.Language == "en";
     ViewData["Title"] = en ? "My Account" : "Hesabım";
@@ -114,7 +115,9 @@
                 @if (Model.Notifications.Count == 0) { <div class="panel-empty"><strong>@(en ? "No notifications" : "Bildiriminiz yok")</strong><span>@(en ? "New updates will appear here." : "Yeni güncellemeler burada görünecek.")</span></div> }
                 @foreach (var item in Model.Notifications)
                 {
-                    <article class="notification-item @(!item.IsRead ? "unread" : null)"><span></span><div><h2>@item.Title</h2><p>@item.Message</p><time>@item.CreatedAt.LocalDateTime.ToString("dd.MM.yyyy HH:mm")</time></div></article>
+                    var targetController = Model.IsAdmin && item.Type == NotificationType.RegistrationApprovalRequested ? "Registrations" : Model.IsAdmin && item.Type == NotificationType.LeaveRequestCreated ? "LeaveRequests" : Model.IsAdmin && item.Type is NotificationType.AttendanceCorrectionCreated or NotificationType.MissingAttendanceDetected ? "AttendanceCorrections" : Model.IsAdmin && item.Type == NotificationType.FieldWorkRequestCreated ? "WorkLocations" : "MyWork";
+                    var targetAction = !Model.IsAdmin && item.Type is NotificationType.LeaveApproved or NotificationType.LeaveRejected ? "Leaves" : !Model.IsAdmin && item.Type is NotificationType.AttendanceCorrectionApproved or NotificationType.AttendanceCorrectionRejected or NotificationType.AttendanceWarning ? "Records" : !Model.IsAdmin && item.Type is NotificationType.FieldWorkRequestApproved or NotificationType.FieldWorkRequestRejected or NotificationType.WorkLocationAssigned ? "FieldWork" : "Index";
+                    <form asp-action="MarkNotificationRead" method="post" class="notification-item-form"><input type="hidden" name="id" value="@item.Id" /><input type="hidden" name="returnUrl" value="@Url.Action(targetAction, targetController)" /><button type="submit" class="notification-item @(!item.IsRead ? "unread" : null)" aria-label="@item.Title bildirimini aç"><span></span><span><h2>@item.Title</h2><p>@item.Message</p><time>@item.CreatedAt.LocalDateTime.ToString("dd.MM.yyyy HH:mm")</time></span></button></form>
                 }
             </section>
         }

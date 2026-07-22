@@ -9,4 +9,5 @@ public interface IEmployeeAdminService
     Task<Guid> CreateAsync(CreateEmployeeDto request, Guid actorId, string? correlationId = null, CancellationToken cancellationToken = default);
     Task<bool> UpdateAsync(UpdateEmployeeDto request, Guid actorId, string? correlationId = null, CancellationToken cancellationToken = default);
     Task<bool> SetActiveAsync(Guid id, bool active, Guid actorId, string? correlationId = null, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid id, Guid actorId, string? correlationId = null, CancellationToken cancellationToken = default);
 }

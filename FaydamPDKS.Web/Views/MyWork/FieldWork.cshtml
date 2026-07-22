@@ -1,7 +1,40 @@
 @model IReadOnlyList<FaydamPDKS.Core.DTOs.FieldWorkRequestDto>
 @using FaydamPDKS.Core.Enums
-@{ViewData["Title"]="Saha Görevlerim";}
-<div class="page-header"><div><span class="eyebrow">ÇALIŞMA KONUMU</span><h1>Saha görevi talebi</h1><p>Gelecek tarihli saha çalışmalarınızı yönetici onayına gönderin.</p></div></div>
-@if(TempData["Success"] is string ok){<div class="alert alert-success">@ok</div>} @if(TempData["Error"] is string err){<div class="alert alert-danger">@err</div>}
-<section class="content-card mb-4"><form asp-action="CreateFieldWork" method="post" class="row g-3"><div class="col-md-3"><label class="form-label">Başlangıç</label><input type="date" name="StartDate" class="form-control" required/></div><div class="col-md-3"><label class="form-label">Bitiş</label><input type="date" name="EndDate" class="form-control" required/></div><div class="col-md-3"><label class="form-label">Tekrar</label><select name="RecurrenceType" class="form-select"><option value="1">Her iş günü</option><option value="2">Seçili günler</option></select></div><div class="col-md-3"><label class="form-label">Proje</label><input name="ProjectName" class="form-control" required/></div><div class="col-12 d-flex gap-3">@foreach(var d in new[]{(1,"Pzt"),(2,"Sal"),(3,"Çar"),(4,"Per"),(5,"Cum")}){<label><input type="checkbox" name="Days" value="@d.Item1"/> @d.Item2</label>}</div><div class="col-md-6"><input name="CustomerName" class="form-control" placeholder="Müşteri"/></div><div class="col-md-6"><input name="FieldAddress" class="form-control" placeholder="Saha adresi"/></div><div class="col-12"><textarea name="Reason" minlength="10" required class="form-control" placeholder="Görev gerekçesi"></textarea></div><div><button class="btn btn-primary">Talep gönder</button></div></form></section>
-<section class="content-card"><h2>Taleplerim</h2><div class="table-responsive"><table class="table"><thead><tr><th>Tarih</th><th>Proje</th><th>Durum</th><th></th></tr></thead><tbody>@foreach(var x in Model){<tr><td>@x.StartDate.ToString("dd.MM.yyyy") – @x.EndDate.ToString("dd.MM.yyyy")</td><td>@x.ProjectName</td><td>@x.Status</td><td>@if(x.Status==WorkLocationRequestStatus.Pending){<form asp-action="CancelFieldWork" method="post"><input type="hidden" name="id" value="@x.Id"/><button class="btn btn-sm btn-outline-danger">İptal</button></form>}</td></tr>}</tbody></table></div></section>
+@{
+    ViewData["Title"] = "Çalışma Konumu Taleplerim";
+    static string Status(WorkLocationRequestStatus status) => status switch
+    {
+        WorkLocationRequestStatus.Pending => "Onay bekliyor",
+        WorkLocationRequestStatus.Approved => "Onaylandı",
+        WorkLocationRequestStatus.Rejected => "Reddedildi",
+        WorkLocationRequestStatus.Cancelled => "İptal edildi",
+        _ => status.ToString()
+    };
+}
+<div class="page-header"><div><span class="eyebrow">ÇALIŞMA KONUMU</span><h1>Çalışma konumu talebi</h1><p>Uzaktan çalışma ve saha görevi planlarınızı yönetici onayına gönderin.</p></div></div>
+@if (TempData["Success"] is string ok) { <div class="alert alert-success">@ok</div> }
+@if (TempData["Error"] is string err) { <div class="alert alert-danger">@err</div> }
+
+<section class="content-card mb-4">
+    <form asp-action="CreateFieldWork" method="post" class="row g-3" data-field-work-request-form>
+        <div class="col-md-3"><label class="form-label">Talep türü</label><select name="LocationType" class="form-select" data-request-location-type><option value="1">Uzaktan çalışma</option><option value="2">Saha görevi</option></select></div>
+        <div class="col-md-3"><label class="form-label">Başlangıç</label><input type="date" name="StartDate" class="form-control" required /></div>
+        <div class="col-md-3"><label class="form-label">Bitiş</label><input type="date" name="EndDate" class="form-control" required /></div>
+        <div class="col-md-3"><label class="form-label">Tekrar</label><select name="RecurrenceType" class="form-select" data-recurrence-type><option value="3">Tekrarlanmaz</option><option value="1">Tarih aralığındaki her iş günü</option><option value="2">Seçili günler</option></select></div>
+        <div class="col-12 d-flex flex-wrap gap-3" data-weekday-fields hidden>@foreach (var day in new[] { (1, "Pzt"), (2, "Sal"), (3, "Çar"), (4, "Per"), (5, "Cum") }) { <label><input type="checkbox" name="Days" value="@day.Item1" disabled /> @day.Item2</label> }</div>
+        <div class="col-12 row g-3 m-0 p-0" data-request-field-fields hidden>
+            <div class="col-md-4"><label class="form-label">Proje</label><input name="ProjectName" class="form-control" maxlength="150" /></div>
+            <div class="col-md-4"><label class="form-label">Müşteri</label><input name="CustomerName" class="form-control" maxlength="150" /></div>
+            <div class="col-md-4"><label class="form-label">Saha adresi</label><input name="FieldAddress" class="form-control" maxlength="300" /></div>
+        </div>
+        <div class="col-12"><label class="form-label">Talep gerekçesi</label><textarea name="Reason" minlength="10" maxlength="500" required class="form-control" placeholder="En az 10 karakterle açıklayın"></textarea></div>
+        <div><button class="btn btn-primary">Talep gönder</button></div>
+    </form>
+</section>
+
+<section class="content-card"><h2>Taleplerim</h2><div class="table-responsive"><table class="table"><thead><tr><th>Tarih</th><th>Tür</th><th>Detay</th><th>Durum</th><th></th></tr></thead><tbody>
+@foreach (var request in Model)
+{
+    <tr><td>@(request.StartDate == request.EndDate ? request.StartDate.ToString("dd.MM.yyyy") : $"{request.StartDate:dd.MM.yyyy} – {request.EndDate:dd.MM.yyyy}")</td><td>@(request.LocationType == WorkLocationType.Field ? "Saha görevi" : "Uzaktan çalışma")</td><td>@(request.LocationType == WorkLocationType.Field ? request.ProjectName : request.Reason)</td><td>@Status(request.Status)</td><td>@if (request.Status == WorkLocationRequestStatus.Pending) { <form asp-action="CancelFieldWork" method="post"><input type="hidden" name="id" value="@request.Id" /><button class="btn btn-sm btn-outline-danger">İptal</button></form> }</td></tr>
+}
+</tbody></table></div></section>

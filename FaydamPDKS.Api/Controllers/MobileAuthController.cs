@@ -11,8 +11,22 @@ namespace FaydamPDKS.Api.Controllers;
 [ApiController]
 [Route("api/v1/auth")]
 [Produces("application/json")]
-public sealed class MobileAuthController(IMobileAuthService auth) : ControllerBase
+public sealed class MobileAuthController(IMobileAuthService auth, EmailRegistrationService registrations) : ControllerBase
 {
+    [AllowAnonymous]
+    [HttpPost("register")]
+    [EnableRateLimiting("mobile-auth")]
+    [ProducesResponseType<MobileAuthResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiErrorDto>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Register(EmailRegistrationRequest request, CancellationToken cancellationToken)
+    {
+        try { return Ok(await registrations.RegisterAsync(request, cancellationToken)); }
+        catch (InvalidOperationException ex) when (ex.Message == "EMAIL_ALREADY_REGISTERED")
+        {
+            return Conflict(Error("EMAIL_ALREADY_REGISTERED", "Bu e-posta adresiyle daha önce kayıt oluşturulmuş. Giriş ekranını kullanın."));
+        }
+    }
+
     [AllowAnonymous]
     [HttpPost("login")]
     [EnableRateLimiting("mobile-auth")]

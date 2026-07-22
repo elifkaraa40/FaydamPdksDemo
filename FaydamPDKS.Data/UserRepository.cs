@@ -47,4 +47,19 @@ public sealed class UserRepository(AppDbContext context) : Repository<User>(cont
 
     public Task<bool> EmployeeNumberExistsAsync(string normalizedEmployeeNumber, Guid? excludingUserId = null, CancellationToken cancellationToken = default) =>
         Context.Users.AnyAsync(x => x.EmployeeNumber == normalizedEmployeeNumber && (!excludingUserId.HasValue || x.Id != excludingUserId.Value), cancellationToken);
+
+    public Task<bool> PhoneNumberExistsAsync(string normalizedPhoneNumber, Guid? excludingUserId = null, CancellationToken cancellationToken = default) =>
+        Context.Users.AnyAsync(x => x.PhoneNumber == normalizedPhoneNumber && (!excludingUserId.HasValue || x.Id != excludingUserId.Value), cancellationToken);
+
+    public async Task<bool> HasRelatedRecordsAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await Context.AccessLogs.AnyAsync(x => x.UserId == userId, cancellationToken)
+        || await Context.LeaveRequests.AnyAsync(x => x.UserId == userId || x.ReviewedByUserId == userId, cancellationToken)
+        || await Context.AttendanceCorrectionRequests.AnyAsync(x => x.UserId == userId || x.ReviewedByUserId == userId, cancellationToken)
+        || await Context.EmployeeShiftAssignments.AnyAsync(x => x.EmployeeId == userId, cancellationToken)
+        || await Context.BreakRecords.AnyAsync(x => x.UserId == userId, cancellationToken)
+        || await Context.WorkLocationAssignments.AnyAsync(x => x.UserId == userId || x.CreatedByUserId == userId || x.EndedByUserId == userId, cancellationToken)
+        || await Context.FieldWorkRequests.AnyAsync(x => x.UserId == userId || x.ReviewedByUserId == userId, cancellationToken)
+        || await Context.RefreshTokens.AnyAsync(x => x.UserId == userId, cancellationToken)
+        || await Context.Notifications.AnyAsync(x => x.UserId == userId, cancellationToken)
+        || await Context.Permissions.AnyAsync(x => x.UserId == userId, cancellationToken);
 }

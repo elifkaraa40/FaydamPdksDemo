@@ -14,7 +14,7 @@ public sealed class AttendanceReportService(
 {
     private readonly AttendanceCalculator _calculator = new();
 
-    public async Task<AttendanceReportDto> GetAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+    public async Task<AttendanceReportDto> GetAsync(DateOnly from, DateOnly to, Guid? employeeId = null, CancellationToken cancellationToken = default)
     {
         if (from == default || to == default || from > to) throw new ArgumentException("Geçerli bir tarih aralığı seçin.");
         if (to.DayNumber - from.DayNumber + 1 > 31) throw new ArgumentException("Rapor en fazla 31 günlük alınabilir.");
@@ -25,7 +25,11 @@ public sealed class AttendanceReportService(
         var startUtc = TimeZoneInfo.ConvertTimeToUtc(localStart, timeZone);
         var endUtc = TimeZoneInfo.ConvertTimeToUtc(localEnd, timeZone);
 
-        var employees = await context.Users.AsNoTracking().Include(x => x.Department).Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync(cancellationToken);
+        var personnel = await context.Users.AsNoTracking().Include(x => x.Role).Include(x => x.Department)
+            .Where(x => x.IsActive && (x.Role == null || (x.Role.NormalizedName != "YONETICI" && x.Role.Name != "Yonetici")))
+            .OrderBy(x => x.Name).ToListAsync(cancellationToken);
+        var employeeOptions = personnel.Select(x => new EmployeeOptionDto(x.Id, x.EmployeeNumber, x.Name)).ToArray();
+        var employees = employeeId.HasValue ? personnel.Where(x => x.Id == employeeId.Value).ToList() : personnel;
         var employeeIds = employees.Select(x => x.Id).ToArray();
         var logs = await context.AccessLogs.AsNoTracking()
             .Where(x => employeeIds.Contains(x.UserId) && x.LogDate >= startUtc && x.LogDate < endUtc)
@@ -87,7 +91,8 @@ public sealed class AttendanceReportService(
             var location = locationAssignments.Where(x => x.UserId == employee.Id && x.StartDate <= date && (!x.EndDate.HasValue || x.EndDate >= date)
                     && WorkLocationService.Applies(x.RecurrenceType, x.Days.Select(d => d.DayOfWeek), date))
                 .OrderByDescending(x => x.LocationType == WorkLocationType.Field).ThenByDescending(x => x.CreatedAt).FirstOrDefault();
-            if (isWorkingDay && !hasActualQr && correction is null && location is not null)
+            if (!isWorkingDay && !hasActualQr && correction is null && location is null) continue;
+            if (!hasActualQr && correction is null && location is not null)
             {
                 var expected = ExpectedMinutes(shift);
                 rows.Add(new AttendanceReportRowDto(employee.Id, employee.EmployeeNumber, employee.Name, employee.Department?.Name ?? employee.DepartmentLegacy,
@@ -98,9 +103,13 @@ public sealed class AttendanceReportService(
             }
             rows.Add(new AttendanceReportRowDto(employee.Id, employee.EmployeeNumber, employee.Name, employee.Department?.Name ?? employee.DepartmentLegacy,
                 date, calendarLabel is null ? assignment?.Shift?.Name ?? "Varsayılan vardiya" : $"{calendarLabel} · {(assignment?.Shift?.Name ?? "Varsayılan vardiya")}", day.Status.ToString(), day.FirstEntry,
-                day.LastExit, day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes, "Office", correction is null ? "QR" : "Correction", false, null));
+                day.LastExit, day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes, location?.LocationType.ToString() ?? "Office", correction is null ? "QR" : "Correction", false,
+                location?.ProjectName ?? location?.CustomerName ?? location?.Reason));
         }
-        return new AttendanceReportDto(from, to, rows);
+        var orderedRows = employeeId.HasValue
+            ? rows.OrderBy(x => x.WorkDate).ToArray()
+            : rows.OrderBy(x => x.WorkDate).ThenBy(x => x.EmployeeName).ToArray();
+        return new AttendanceReportDto(from, to, orderedRows, employeeOptions, employeeId);
     }
 
     private int ReadInt(string key, int fallback) =>

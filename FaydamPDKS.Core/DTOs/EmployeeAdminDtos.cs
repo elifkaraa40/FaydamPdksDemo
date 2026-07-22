@@ -7,6 +7,7 @@ public sealed record EmployeeListItemDto(
     string EmployeeNumber,
     string FullName,
     string Email,
+    string? PhoneNumber,
     string? Workplace,
     string? Department,
     DateOnly? HireDate,
@@ -15,7 +16,7 @@ public sealed record EmployeeListItemDto(
 
 public sealed class CreateEmployeeDto
 {
-    [Required, StringLength(40)]
+    [StringLength(40)]
     public string EmployeeNumber { get; set; } = string.Empty;
 
     [Required, StringLength(100)]
@@ -23,6 +24,9 @@ public sealed class CreateEmployeeDto
 
     [Required, EmailAddress, StringLength(100)]
     public string Email { get; set; } = string.Empty;
+
+    [StringLength(20)]
+    public string? PhoneNumber { get; set; }
 
     public Guid? DepartmentId { get; set; }
 
@@ -49,6 +53,9 @@ public sealed class UpdateEmployeeDto
 
     [Required, EmailAddress, StringLength(100)]
     public string Email { get; set; } = string.Empty;
+
+    [StringLength(20)]
+    public string? PhoneNumber { get; set; }
 
     public Guid? DepartmentId { get; set; }
 
