@@ -4,7 +4,10 @@ public sealed record MobileAuthResponse(
     string AccessToken,
     string RefreshToken,
     DateTimeOffset ExpiresAt,
-    MobileUserDto User);
+    MobileUserDto User,
+    Guid DeviceSessionId,
+    bool PreviousDeviceSessionRevoked = false,
+    string? DeviceSessionNotice = null);
 
 public sealed record MobileUserDto(
     Guid Id,

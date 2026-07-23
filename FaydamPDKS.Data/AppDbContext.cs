@@ -17,6 +17,7 @@ namespace FaydamPDKS.Data
         public DbSet<Zone> Zones { get; set; }
         public DbSet<Report> Reports { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<DeviceSession> DeviceSessions { get; set; }
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Shift> Shifts { get; set; }
@@ -68,6 +69,24 @@ namespace FaydamPDKS.Data
                 .HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DeviceSession>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DeviceSession>()
+                .HasIndex(x => new { x.UserId, x.DeviceIdHash, x.RevokedAt });
+
+            modelBuilder.Entity<DeviceSession>()
+                .HasIndex(x => new { x.UserId, x.RevokedAt });
+
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne(x => x.DeviceSession)
+                .WithMany()
+                .HasForeignKey(x => x.DeviceSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<AccessLog>()

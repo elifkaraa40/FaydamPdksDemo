@@ -8,4 +8,5 @@ public sealed record EmailRegistrationRequest(
     [Required, StringLength(FaydamPDKS.Core.Security.PasswordPolicy.MaximumLength,
         MinimumLength = FaydamPDKS.Core.Security.PasswordPolicy.MinimumLength,
         ErrorMessage = FaydamPDKS.Core.Security.PasswordPolicy.RequirementMessage)] string Password,
+    [Required, StringLength(200, MinimumLength = 16)] string DeviceId,
     string? DeviceName);
