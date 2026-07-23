@@ -1,6 +1,7 @@
 using FaydamPDKS.Core.DTOs;
 using FaydamPDKS.Core.DTOs.Common;
 using FaydamPDKS.Core.Interfaces;
+using FaydamPDKS.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -32,9 +33,17 @@ public sealed class MobileLeaveRequestsController(ILeaveRequestService leaveRequ
         {
             return BadRequest(Error("INVALID_LEAVE_REQUEST", ex.Message));
         }
-        catch (InvalidOperationException ex)
+        catch (LeaveOverlapException ex)
         {
-            return Conflict(Error("OVERLAPPING_LEAVE_REQUEST", ex.Message));
+            return Conflict(new ApiErrorDto(
+                "LEAVE_OVERLAP",
+                "Seçtiğiniz tarihler arasında bekleyen veya onaylanmış başka bir izin bulunmaktadır. Lütfen farklı bir tarih aralığı seçin.",
+                new Dictionary<string, string[]>
+                {
+                    ["conflictingStartDate"] = [ex.ConflictingStartDate.ToString("yyyy-MM-dd")],
+                    ["conflictingEndDate"] = [ex.ConflictingEndDate.ToString("yyyy-MM-dd")]
+                },
+                HttpContext.TraceIdentifier));
         }
     }
 

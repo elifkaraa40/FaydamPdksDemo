@@ -1,5 +1,6 @@
 using FaydamPDKS.Core.DTOs;
 using FaydamPDKS.Core.Enums;
+using FaydamPDKS.Core.Exceptions;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Core.Models;
 
@@ -33,8 +34,10 @@ public sealed class MobileLeaveRequestService(
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), timeZone).DateTime);
         if (request.StartDate < today)
             throw new ArgumentException("Geçmiş tarihli izin talebi oluşturulamaz.");
-        if (await leaveRequests.HasActiveOverlapAsync(userId, request.StartDate, request.EndDate, cancellationToken))
-            throw new InvalidOperationException("Seçilen tarihlerde bekleyen veya onaylanmış başka bir izin var.");
+        var overlap = await leaveRequests.FindActiveOverlapAsync(
+            userId, request.StartDate, request.EndDate, cancellationToken);
+        if (overlap is not null)
+            throw new LeaveOverlapException(overlap.StartDate, overlap.EndDate);
 
         var entity = new LeaveRequest
         {
