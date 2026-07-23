@@ -18,8 +18,10 @@ public sealed class MobileAttendanceCorrectionService(
     public async Task<AttendanceCorrectionDto> CreateAsync(Guid userId, CreateAttendanceCorrectionDto request, CancellationToken cancellationToken = default)
     {
         var timeZone = ResolveTimeZone(configuration["Attendance:TimeZone"] ?? "Europe/Istanbul");
-        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), timeZone).DateTime);
-        if (request.WorkDate > today) throw new ArgumentException("Gelecek tarihli düzeltme talebi oluşturulamaz.");
+        var localNow = TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), timeZone).DateTime;
+        var today = DateOnly.FromDateTime(localNow);
+        var now = TimeOnly.FromDateTime(localNow);
+        if (request.WorkDate >= today) throw new ArgumentException("Puantaj düzeltme talebi sadece geçmiş tarihler için oluşturulabilir.");
         if (request.WorkDate < today.AddDays(-90)) throw new ArgumentException("En fazla son 90 gün için düzeltme talep edilebilir.");
         if (request.CorrectionType == AttendanceCorrectionType.TimeCorrection && request.RequestedEntry == request.RequestedExit) throw new ArgumentException("Giriş ve çıkış saati aynı olamaz.");
         var reason = request.Reason.Trim();
