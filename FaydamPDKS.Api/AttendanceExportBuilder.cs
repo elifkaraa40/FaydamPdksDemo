@@ -52,7 +52,8 @@ public static class AttendanceExportBuilder
     private static StringBuilder BuildPdfPage(AttendanceReportDto report, AttendanceReportRowDto[] rows, int page, int pageCount)
     {
         string[] headers = ["Sicil No", "Personel", "Bolum", "Tarih", "Vardiya", "Calisma Yeri", "Giris", "Cikis", "Calisma", "Gec/Fazla", "Durum"];
-        double[] widths = [64, 115, 65, 62, 80, 70, 48, 48, 55, 55, 104];
+        // Landscape A4: keep the complete table inside the printable area.
+        double[] widths = [58, 105, 60, 60, 76, 68, 46, 46, 52, 58, 105];
         const double left = 24, rowHeight = 22;
         var content = new StringBuilder();
         content.Append("0.12 0.18 0.30 rg BT /F1 17 Tf 24 555 Td (PUANTAJ RAPORU) Tj ET\n")
@@ -108,11 +109,11 @@ public static class AttendanceExportBuilder
             Entry(archive, "_rels/.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>");
             Entry(archive, "xl/workbook.xml", "<?xml version=\"1.0\" encoding=\"UTF-8\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"Puantaj\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>");
             Entry(archive, "xl/_rels/workbook.xml.rels", "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/></Relationships>");
-            var sheet = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>");
+            var sheet = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetViews><sheetView><pane ySplit=\"1\" topLeftCell=\"A2\" state=\"frozen\"/></sheetView></sheetViews><sheetData>");
             Row(sheet, ["Sicil No", "Personel", "Bölüm", "Tarih", "Vardiya", "Durum", "Çalışma Şekli", "Çalışma Detayı", "İlk Giriş", "Son Çıkış", "Çalışılan Dakika", "Beklenen Dakika", "Geç Dakika", "Fazla Mesai Dakika"]);
             foreach (var x in report.Rows) Row(sheet, [x.EmployeeNumber, x.EmployeeName, x.Department, x.WorkDate.ToString("yyyy-MM-dd"), x.ShiftName,
                 Status(x.Status), WorkLocationLabel(x.WorkLocation), x.WorkLocationDetail, x.FirstEntry?.ToString("dd.MM.yyyy HH:mm"), x.LastExit?.ToString("dd.MM.yyyy HH:mm"), x.WorkedMinutes.ToString(), x.ExpectedMinutes.ToString(), x.LateMinutes.ToString(), x.OvertimeMinutes.ToString()]);
-            sheet.Append("</sheetData></worksheet>");
+            sheet.Append("</sheetData><autoFilter ref=\"A1:N").Append(report.Rows.Count + 1).Append("\"/></worksheet>");
             Entry(archive, "xl/worksheets/sheet1.xml", sheet.ToString());
         }
         return output.ToArray();
