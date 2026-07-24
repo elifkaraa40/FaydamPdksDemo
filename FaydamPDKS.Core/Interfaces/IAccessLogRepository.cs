@@ -10,4 +10,8 @@ public interface IAccessLogRepository : IRepository<AccessLog>
         DateTime fromUtc,
         DateTime toUtc,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AccessLog>> GetRecentQrForUserAsync(
+        Guid userId,
+        int limit,
+        CancellationToken cancellationToken = default);
 }

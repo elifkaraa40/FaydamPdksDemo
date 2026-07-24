@@ -15,7 +15,17 @@ public sealed class AccessLogRepository(AppDbContext context) : Repository<Acces
         DateTime toUtc,
         CancellationToken cancellationToken = default) =>
         await Context.AccessLogs.AsNoTracking()
-            .Where(x => x.UserId == userId && x.LogDate >= fromUtc && x.LogDate <= toUtc)
+            .Where(x => x.UserId == userId && x.LogDate >= fromUtc && x.LogDate < toUtc)
             .OrderBy(x => x.LogDate)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<AccessLog>> GetRecentQrForUserAsync(
+        Guid userId,
+        int limit,
+        CancellationToken cancellationToken = default) =>
+        await Context.AccessLogs.AsNoTracking()
+            .Where(x => x.UserId == userId && x.Source == "MobileQr")
+            .OrderByDescending(x => x.LogDate)
+            .Take(Math.Clamp(limit, 1, 100))
             .ToListAsync(cancellationToken);
 }

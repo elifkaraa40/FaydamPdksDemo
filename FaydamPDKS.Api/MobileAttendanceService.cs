@@ -24,8 +24,8 @@ public sealed class MobileAttendanceService(
         var workDate = DateOnly.FromDateTime(now.DateTime);
         var shift = await ResolveShiftAsync(employeeId, workDate, cancellationToken);
 
-        var localWindowStart = workDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified).AddHours(-4);
-        var localWindowEnd = workDate.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified).AddHours(8);
+        var localWindowStart = workDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+        var localWindowEnd = workDate.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
         var fromUtc = TimeZoneInfo.ConvertTimeToUtc(localWindowStart, timeZone);
         var toUtc = TimeZoneInfo.ConvertTimeToUtc(localWindowEnd, timeZone);
         var logs = await accessLogs.GetForUserAsync(employeeId, fromUtc, toUtc, cancellationToken);
@@ -36,8 +36,12 @@ public sealed class MobileAttendanceService(
                 ? AttendanceEventType.Entry
                 : AttendanceEventType.Exit,
             x.DeviceEventId ?? x.Id.ToString())).ToArray();
+        var firstEntry = rawEvents.FirstOrDefault(x => x.Type == AttendanceEventType.Entry);
+        var todayEvents = firstEntry is null
+            ? Array.Empty<AttendanceEvent>()
+            : rawEvents.Where(x => x.OccurredAt >= firstEntry.OccurredAt).ToArray();
         var correction = (await corrections.GetApprovedAsync(employeeId, workDate, workDate, cancellationToken)).FirstOrDefault();
-        var events = correction is null ? rawEvents : CorrectionEvents(employeeId, correction, timeZone);
+        var events = correction is null ? todayEvents : CorrectionEvents(employeeId, correction, timeZone);
 
         var calendar = await workCalendar.ResolveAsync(employeeId, workDate, cancellationToken);
         var breakMinutes = await GetBreakMinutesAsync(employeeId, workDate, timeZone, cancellationToken);
@@ -96,6 +100,19 @@ public sealed class MobileAttendanceService(
                 day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes));
         }
         return result;
+    }
+
+    public async Task<IReadOnlyList<QrAttendanceHistoryDto>> GetQrHistoryAsync(
+        Guid employeeId,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        var logs = await accessLogs.GetRecentQrForUserAsync(employeeId, Math.Clamp(limit, 1, 100), cancellationToken);
+        return logs.Select(x => new QrAttendanceHistoryDto(
+            x.Id,
+            new DateTimeOffset(DateTime.SpecifyKind(x.LogDate, DateTimeKind.Utc)),
+            x.LogType.Equals("Giris", StringComparison.OrdinalIgnoreCase) ? "Entry" : "Exit"))
+            .ToArray();
     }
 
     public async Task<bool> AddEventAsync(Guid employeeId, CreateAttendanceEventRequest request, CancellationToken cancellationToken = default)
