@@ -27,6 +27,25 @@ public sealed class MobileProfileService(IUserRepository users, IUnitOfWork unit
         return Map(user);
     }
 
+    public async Task<bool> ChangePasswordAsync(
+        Guid userId,
+        ChangeMobilePasswordDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await users.GetByIdWithRoleAsync(userId, true, cancellationToken);
+        if (user is null) return false;
+        if (!string.Equals(request.NewPassword, request.NewPasswordConfirmation, StringComparison.Ordinal))
+            throw new InvalidOperationException("PASSWORD_CONFIRMATION_MISMATCH");
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            throw new InvalidOperationException("CURRENT_PASSWORD_INVALID");
+        if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+            throw new InvalidOperationException("PASSWORD_REUSE_NOT_ALLOWED");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     private static MobileProfileDto Map(User x) => new(
         x.Id, x.Name, x.Email, x.Role?.Name ?? "Personel", x.PhoneNumber,
         x.ProfileImageUrl, x.IsEmailNotificationEnabled, x.IsSmsNotificationEnabled,
