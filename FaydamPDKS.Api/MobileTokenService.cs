@@ -79,6 +79,8 @@ public sealed class MobileTokenService(
         {
             token.DeviceSession.RevokedAt = now;
             token.DeviceSession.RevokeReason = "USER_LOGOUT";
+            token.DeviceSession.PushToken = null;
+            token.DeviceSession.PushTokenDisabledAt = now;
             await RevokeTokensForSessionsAsync([token.DeviceSession.Id], now, cancellationToken);
         }
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -94,6 +96,8 @@ public sealed class MobileTokenService(
         {
             session.RevokedAt = now;
             session.RevokeReason = "LOGOUT_ALL";
+            session.PushToken = null;
+            session.PushTokenDisabledAt = now;
         }
         await refreshTokens.RevokeAllForUserAsync(userId, now, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -175,6 +179,8 @@ public sealed class MobileTokenService(
             oldSession.RevokeReason = FixedTimeEquals(oldSession.DeviceIdHash, deviceIdHash)
                 ? "SESSION_RENEWED"
                 : "SIGNED_IN_ON_ANOTHER_DEVICE";
+            oldSession.PushToken = null;
+            oldSession.PushTokenDisabledAt = now;
         }
         await RevokeTokensForSessionsAsync(sessionsToRevoke.Select(x => x.Id), now, cancellationToken);
 

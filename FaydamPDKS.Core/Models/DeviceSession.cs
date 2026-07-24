@@ -32,5 +32,20 @@ public sealed class DeviceSession
     [MaxLength(80), Column("revoke_reason")]
     public string? RevokeReason { get; set; }
 
+    [MaxLength(2048), Column("push_token")]
+    public string? PushToken { get; set; }
+
+    [MaxLength(20), Column("push_platform")]
+    public string? PushPlatform { get; set; }
+
+    [MaxLength(5), Column("push_language")]
+    public string? PushLanguage { get; set; }
+
+    [Column("push_token_updated_at")]
+    public DateTimeOffset? PushTokenUpdatedAt { get; set; }
+
+    [Column("push_token_disabled_at")]
+    public DateTimeOffset? PushTokenDisabledAt { get; set; }
+
     public bool IsActive => RevokedAt is null;
 }

@@ -18,6 +18,7 @@ namespace FaydamPDKS.Data
         public DbSet<Report> Reports { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<DeviceSession> DeviceSessions { get; set; }
+        public DbSet<PushNotificationDelivery> PushNotificationDeliveries { get; set; }
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Shift> Shifts { get; set; }
@@ -82,6 +83,30 @@ namespace FaydamPDKS.Data
 
             modelBuilder.Entity<DeviceSession>()
                 .HasIndex(x => new { x.UserId, x.RevokedAt });
+
+            modelBuilder.Entity<DeviceSession>()
+                .HasIndex(x => x.PushToken)
+                .IsUnique()
+                .HasFilter("push_token IS NOT NULL");
+
+            modelBuilder.Entity<PushNotificationDelivery>()
+                .HasOne(x => x.Notification)
+                .WithMany()
+                .HasForeignKey(x => x.NotificationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PushNotificationDelivery>()
+                .HasOne(x => x.DeviceSession)
+                .WithMany()
+                .HasForeignKey(x => x.DeviceSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PushNotificationDelivery>()
+                .HasIndex(x => new { x.NotificationId, x.DeviceSessionId })
+                .IsUnique();
+
+            modelBuilder.Entity<PushNotificationDelivery>()
+                .HasIndex(x => new { x.SentAt, x.NextAttemptAt });
 
             modelBuilder.Entity<RefreshToken>()
                 .HasOne(x => x.DeviceSession)

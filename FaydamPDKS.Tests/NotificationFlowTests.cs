@@ -39,9 +39,50 @@ public sealed class NotificationFlowTests
         Assert.Equal("LeaveRequest.Approved", audit.Action);
         Assert.Equal(reviewer.Id, audit.ActorUserId);
 
-        var mobile = new MobileNotificationService(notificationRepository, unitOfWork, time);
+        var mobile = new MobileNotificationService(notificationRepository, unitOfWork, time, context);
+        Assert.Equal(1, await mobile.GetUnreadCountAsync(user.Id));
+        var english = await mobile.GetMineAsync(user.Id, "en");
+        Assert.Equal("Leave request approved", english.Single().Title);
         Assert.False(await mobile.MarkReadAsync(reviewer.Id, stored.Id));
         Assert.True(await mobile.MarkReadAsync(user.Id, stored.Id));
         Assert.NotNull((await context.Notifications.SingleAsync()).ReadAt);
+        Assert.Equal(0, await mobile.GetUnreadCountAsync(user.Id));
+    }
+
+    [Fact]
+    public async Task Push_token_is_linked_to_active_session_and_duplicate_registration_is_moved()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var role = new Role { Id = Guid.NewGuid(), Name = "Personel", NormalizedName = "PERSONEL" };
+        var user = new User { Id = Guid.NewGuid(), Name = "Personel", Email = "push@faydam.com", RoleId = role.Id, Role = role };
+        var first = new DeviceSession
+        {
+            UserId = user.Id, User = user, DeviceIdHash = new string('A', 64), DeviceName = "Telefon A",
+            LoggedInAt = DateTimeOffset.UtcNow, LastActiveAt = DateTimeOffset.UtcNow
+        };
+        var second = new DeviceSession
+        {
+            UserId = user.Id, User = user, DeviceIdHash = new string('B', 64), DeviceName = "Telefon B",
+            LoggedInAt = DateTimeOffset.UtcNow, LastActiveAt = DateTimeOffset.UtcNow
+        };
+        context.AddRange(role, user, first, second);
+        await context.SaveChangesAsync();
+        var time = new TestTimeProvider(new DateTimeOffset(2026, 7, 24, 8, 0, 0, TimeSpan.Zero));
+        var mobile = new MobileNotificationService(
+            new NotificationRepository(context), new UnitOfWork(context), time, context);
+
+        await mobile.RegisterPushDeviceAsync(
+            user.Id, first.Id, new RegisterPushDeviceDto("same-fcm-token", "android", "tr"));
+        await mobile.RegisterPushDeviceAsync(
+            user.Id, second.Id, new RegisterPushDeviceDto("same-fcm-token", "android", "en"));
+
+        Assert.Null(first.PushToken);
+        Assert.Equal("same-fcm-token", second.PushToken);
+        Assert.Equal("en", second.PushLanguage);
+        Assert.NotNull(first.PushTokenDisabledAt);
+
+        await mobile.UnregisterPushDeviceAsync(user.Id, second.Id);
+        Assert.Null(second.PushToken);
+        Assert.NotNull(second.PushTokenDisabledAt);
     }
 }
