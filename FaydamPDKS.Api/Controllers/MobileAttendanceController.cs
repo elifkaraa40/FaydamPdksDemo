@@ -22,7 +22,8 @@ public sealed class MobileAttendanceController(IAttendanceService attendance, IA
     }
 
     [HttpGet("export")]
-    public async Task<IActionResult> Export([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] string format = "csv", CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Export([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] string format = "csv",
+        [FromQuery] string language = "tr", CancellationToken cancellationToken = default)
     {
         if (!TryGetUserId(out var userId)) return UnauthorizedError();
         var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
@@ -32,11 +33,12 @@ public sealed class MobileAttendanceController(IAttendanceService attendance, IA
         {
             var report = await reports.GetAsync(from, to, userId, cancellationToken);
             var fileName = $"puantajim-{from:yyyyMMdd}-{to:yyyyMMdd}";
+            var english = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase);
             return format.ToLowerInvariant() switch
             {
-                "csv" => File(AttendanceExportBuilder.Csv(report), "text/csv; charset=utf-8", fileName + ".csv"),
-                "pdf" => File(AttendanceExportBuilder.Pdf(report), "application/pdf", fileName + ".pdf"),
-                "xlsx" => File(AttendanceExportBuilder.Xlsx(report), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName + ".xlsx"),
+                "csv" => File(AttendanceExportBuilder.Csv(report, english), "text/csv; charset=utf-8", fileName + ".csv"),
+                "pdf" => File(AttendanceExportBuilder.Pdf(report, english), "application/pdf", fileName + ".pdf"),
+                "xlsx" => File(AttendanceExportBuilder.Xlsx(report, english), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName + ".xlsx"),
                 _ => BadRequest(new ApiErrorDto("INVALID_FORMAT", "Format csv, xlsx veya pdf olmalıdır.", TraceId: HttpContext.TraceIdentifier))
             };
         }
