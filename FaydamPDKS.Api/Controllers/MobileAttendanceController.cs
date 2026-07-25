@@ -21,6 +21,14 @@ public sealed class MobileAttendanceController(IAttendanceService attendance, IA
         return Ok(await attendance.GetTodayAsync(userId, cancellationToken));
     }
 
+    [HttpGet("qr-history")]
+    [ProducesResponseType<IReadOnlyList<QrAttendanceHistoryDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> QrHistory([FromQuery] int limit = 20, CancellationToken cancellationToken = default)
+    {
+        if (!TryGetUserId(out var userId)) return UnauthorizedError();
+        return Ok(await attendance.GetQrHistoryAsync(userId, Math.Clamp(limit, 1, 100), cancellationToken));
+    }
+
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] string format = "csv",
         [FromQuery] string language = "tr", CancellationToken cancellationToken = default)

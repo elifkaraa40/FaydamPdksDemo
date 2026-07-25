@@ -27,6 +27,8 @@ builder.Services.AddScoped<IAttendanceService, MobileAttendanceService>();
 builder.Services.AddScoped<ILeaveRequestService, MobileLeaveRequestService>();
 builder.Services.AddScoped<IMobileProfileService, MobileProfileService>();
 builder.Services.AddScoped<IMobileNotificationService, MobileNotificationService>();
+builder.Services.AddSingleton<IFirebasePushSender, FirebasePushSender>();
+builder.Services.AddHostedService<PushNotificationWorker>();
 builder.Services.AddScoped<IAttendanceCorrectionService, MobileAttendanceCorrectionService>();
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
