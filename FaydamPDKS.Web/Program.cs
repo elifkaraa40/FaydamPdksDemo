@@ -1,6 +1,7 @@
 using FaydamPDKS.Data;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Web;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -43,9 +44,22 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Home/AccessDenied";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            if (!Guid.TryParse(context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var userId)
+                || !Guid.TryParse(context.Principal?.FindFirst("sid")?.Value, out var sessionId)
+                || !await context.HttpContext.RequestServices
+                    .GetRequiredService<WebDeviceSessionService>()
+                    .ValidateAndTouchAsync(userId, sessionId, context.HttpContext.RequestAborted))
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+        };
     });
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<WebDeviceSessionService>();
 builder.Services.AddScoped<IWebLeaveApprovalService, WebLeaveApprovalService>();
 builder.Services.AddScoped<IEmployeeAdminService, WebEmployeeAdminService>();
 builder.Services.AddScoped<IShiftAdminService, WebShiftAdminService>();
