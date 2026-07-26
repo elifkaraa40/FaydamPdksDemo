@@ -129,7 +129,9 @@
                     {
                         <a class="context-home @(currentController == "Modules" ? "active" : null)" asp-controller="Modules" asp-action="Reporting"><span>←</span> Raporlama Merkezi</a>
                         <span class="context-divider" aria-hidden="true"></span>
-                        <a class="@(currentController == "Reports" ? "active" : null)" asp-controller="Reports" asp-action="Index">PDKS Raporları</a>
+                        <a class="@(currentController == "Reports" && currentAction == "Attendance" ? "active" : null)" asp-controller="Reports" asp-action="Attendance">Puantaj Özeti</a>
+                        <a class="@(currentController == "Reports" && currentAction == "Transitions" ? "active" : null)" asp-controller="Reports" asp-action="Transitions">QR Hareketleri</a>
+                        <a class="@(currentController == "Reports" && currentAction == "Leaves" ? "active" : null)" asp-controller="Reports" asp-action="Leaves">İzin Raporu</a>
                         <a class="@(currentController == "Audit" ? "active" : null)" asp-controller="Audit" asp-action="Index">Denetim Kayıtları</a>
                     }
                     else if (isActions)

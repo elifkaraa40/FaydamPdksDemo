@@ -1,0 +1,45 @@
+@using FaydamPDKS.Core
+@using FaydamPDKS.Core.Enums
+@model FaydamPDKS.Web.Models.LeaveReportViewModel
+@{
+    ViewData["Title"] = "İzin Raporu";
+    var approvedDays = Model.Rows.Where(x => x.Status == LeaveRequestStatus.Approved).Sum(x => x.WorkDayCount);
+    var pendingCount = Model.Rows.Count(x => x.Status == LeaveRequestStatus.Pending);
+    string StatusClass(LeaveRequestStatus value) => value switch { LeaveRequestStatus.Approved => "success", LeaveRequestStatus.Pending => "warning", _ => "neutral" };
+}
+<section class="hero compact-hero">
+    <div><p class="eyebrow">Raporlama</p><h1>İzin raporu</h1><p>İzin taleplerini tür, durum ve iş günü karşılığıyla ayrı olarak inceleyin.</p></div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-light" asp-action="ExportLeavesCsv" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-leaveType="@Model.SelectedLeaveType" asp-route-status="@Model.SelectedStatus">CSV indir</a>
+        <a class="btn btn-success" asp-action="ExportLeavesExcel" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-leaveType="@Model.SelectedLeaveType" asp-route-status="@Model.SelectedStatus">Excel indir</a>
+        <a class="btn btn-primary" asp-action="ExportLeavesPdf" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-leaveType="@Model.SelectedLeaveType" asp-route-status="@Model.SelectedStatus">PDF indir</a>
+    </div>
+</section>
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<section class="panel report-filter" aria-labelledby="leave-filter-title">
+    <form asp-action="Leaves" method="get" class="filter-form">
+        <h2 id="leave-filter-title" class="visually-hidden">İzin raporu filtresi</h2>
+        <div class="form-field"><label for="from">Başlangıç</label><input id="from" name="from" type="date" value="@Model.From.ToString("yyyy-MM-dd")" required /></div>
+        <div class="form-field"><label for="to">Bitiş</label><input id="to" name="to" type="date" value="@Model.To.ToString("yyyy-MM-dd")" required /></div>
+        <div class="form-field"><label for="employeeId">Personel</label><select id="employeeId" name="employeeId"><option value="">Tüm personel</option>@foreach (var employee in Model.Employees) { <option value="@employee.Id" selected="@(Model.SelectedEmployeeId == employee.Id ? "selected" : null)">@employee.EmployeeNumber · @employee.FullName</option> }</select></div>
+        <div class="form-field"><label for="leaveType">İzin türü</label><select id="leaveType" name="leaveType"><option value="">Tüm türler</option>@foreach (var value in Enum.GetValues<LeaveType>()) { <option value="@value" selected="@(Model.SelectedLeaveType == value ? "selected" : null)">@LeaveLabels.Type(value)</option> }</select></div>
+        <div class="form-field"><label for="status">Durum</label><select id="status" name="status"><option value="">Tüm durumlar</option>@foreach (var value in Enum.GetValues<LeaveRequestStatus>()) { <option value="@value" selected="@(Model.SelectedStatus == value ? "selected" : null)">@LeaveLabels.Status(value)</option> }</select></div>
+        <button class="btn btn-primary" type="submit">İzinleri getir</button>
+        <small>Seçilen tarihlerle kesişen izin talepleri listelenir. En fazla 93 gün seçilebilir.</small>
+    </form>
+</section>
+
+<section class="panel mt-4" aria-labelledby="leave-list-title">
+    <div class="panel-heading"><div><p class="eyebrow">@Model.From.ToString("dd.MM.yyyy") – @Model.To.ToString("dd.MM.yyyy")</p><h2 id="leave-list-title">İzin kullanımı</h2></div><div class="d-flex gap-2 flex-wrap"><span class="summary-pill">@Model.Rows.Count talep</span><span class="summary-pill">@approvedDays.ToString("0.#") onaylı iş günü</span><span class="summary-pill">@pendingCount bekleyen</span></div></div>
+    @if (Model.Rows.Count == 0) { <div class="panel-empty"><strong>Seçilen aralıkta izin talebi bulunamadı.</strong></div> }
+    else { <div class="table-responsive"><table class="table align-middle">
+        <thead><tr><th>Personel</th><th>İzin dönemi</th><th>Tür / süre</th><th>Seçili aralıkta iş günü</th><th>Durum</th><th>Açıklama</th></tr></thead>
+        <tbody>@foreach (var row in Model.Rows) { <tr>
+            <td><strong>@row.EmployeeName</strong><small>@row.EmployeeNumber · @(row.Department ?? "Bölüm yok")</small></td>
+            <td><strong>@row.StartDate.ToString("dd.MM.yyyy")</strong><small>@row.EndDate.ToString("dd.MM.yyyy") tarihine kadar</small></td>
+            <td><strong>@LeaveLabels.Type(row.LeaveType)</strong><small>@LeaveLabels.Portion(row.DayPortion)</small></td>
+            <td>@row.WorkDayCount.ToString("0.#") gün</td><td><span class="status @StatusClass(row.Status)">@LeaveLabels.Status(row.Status)</span></td><td>@(row.Reason ?? "—")</td>
+        </tr> }</tbody>
+    </table></div> }
+</section>

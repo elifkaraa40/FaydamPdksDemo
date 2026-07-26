@@ -15,7 +15,7 @@
 
 <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 <section class="panel report-filter" aria-labelledby="report-filter-title">
-    <form asp-action="Index" method="get" class="filter-form">
+    <form asp-action="Attendance" method="get" class="filter-form">
         <h2 id="report-filter-title" class="visually-hidden">Rapor filtresi</h2>
         <div class="form-field"><label for="from">Başlangıç</label><input id="from" name="from" type="date" value="@Model.From.ToString("yyyy-MM-dd")" required /></div>
         <div class="form-field"><label for="to">Bitiş</label><input id="to" name="to" type="date" value="@Model.To.ToString("yyyy-MM-dd")" required /></div>

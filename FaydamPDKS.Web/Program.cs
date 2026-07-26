@@ -66,6 +66,7 @@ builder.Services.AddScoped<IShiftAdminService, WebShiftAdminService>();
 builder.Services.AddScoped<IWebAttendanceCorrectionService, WebAttendanceCorrectionService>();
 builder.Services.AddScoped<IOrganizationAdminService, WebOrganizationAdminService>();
 builder.Services.AddScoped<IWorkCalendarAdminService, WebWorkCalendarAdminService>();
+builder.Services.AddScoped<WebReportingService>();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
