@@ -12,7 +12,9 @@ public sealed class AttendanceReportFileBuilderTests
         var employeeId = Guid.NewGuid();
         var rows = Enumerable.Range(0, 24).Select(index => new AttendanceReportRowDto(
             employeeId, "PER-0001", "Demo Personel", "Üretim Bölümü", new DateOnly(2026, 7, 14).AddDays(index),
-            "Varsayılan vardiya", index % 3 == 0 ? "NoRecord" : "Complete", null, null,
+            "Varsayılan vardiya", index % 3 == 0 ? "NoRecord" : "Complete",
+            index == 1 ? new DateTimeOffset(2026, 7, 15, 8, 30, 0, TimeSpan.FromHours(3)) : null,
+            index == 1 ? new DateTimeOffset(2026, 7, 15, 18, 0, 0, TimeSpan.FromHours(3)) : null,
             index % 3 == 0 ? 0 : 480, 480, 0, 0)).ToArray();
         var report = new AttendanceReportDto(new DateOnly(2026, 7, 14), new DateOnly(2026, 8, 6), rows);
 
@@ -30,7 +32,9 @@ public sealed class AttendanceReportFileBuilderTests
         var employeeId = Guid.NewGuid();
         var rows = Enumerable.Range(0, 12).Select(index => new AttendanceReportRowDto(
             employeeId, $"PER-{index + 1:0000}", $"Demo Personel {index + 1}", "Üretim Bölümü", new DateOnly(2026, 7, 14).AddDays(index),
-            "Varsayılan vardiya", index % 3 == 0 ? "NoRecord" : "Complete", null, null,
+            "Varsayılan vardiya", index % 3 == 0 ? "NoRecord" : "Complete",
+            index == 1 ? new DateTimeOffset(2026, 7, 15, 8, 30, 0, TimeSpan.FromHours(3)) : null,
+            index == 1 ? new DateTimeOffset(2026, 7, 15, 18, 0, 0, TimeSpan.FromHours(3)) : null,
             index % 3 == 0 ? 0 : 480, 480, index, index * 2)).ToArray();
         var report = new AttendanceReportDto(new DateOnly(2026, 7, 14), new DateOnly(2026, 7, 25), rows);
 
@@ -42,6 +46,9 @@ public sealed class AttendanceReportFileBuilderTests
         var sheetXml = reader.ReadToEnd();
         Assert.Contains("state=\"frozen\"", sheetXml);
         Assert.Contains("autoFilter", sheetXml);
+        Assert.Contains("<t>08:30</t>", sheetXml);
+        Assert.Contains("<t>18:00</t>", sheetXml);
+        Assert.DoesNotContain("15.07.2026 08:30", sheetXml);
         var qaPath = Environment.GetEnvironmentVariable("EXCEL_QA_PATH");
         if (!string.IsNullOrWhiteSpace(qaPath)) File.WriteAllBytes(qaPath, excel);
     }

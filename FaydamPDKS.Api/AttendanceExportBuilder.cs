@@ -17,7 +17,7 @@ public static class AttendanceExportBuilder
         foreach (var row in report.Rows)
             output.AppendJoin(';', Cell(row.EmployeeNumber), Cell(row.EmployeeName), Cell(row.Department),
                 row.WorkDate.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture), Cell(row.ShiftName), Cell(Status(row.Status, english)), Cell(WorkLocationLabel(row.WorkLocation, english)), Cell(row.WorkLocationDetail),
-                Cell(row.FirstEntry?.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)), Cell(row.LastExit?.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)),
+                Cell(row.FirstEntry?.ToString("HH:mm", CultureInfo.InvariantCulture)), Cell(row.LastExit?.ToString("HH:mm", CultureInfo.InvariantCulture)),
                 row.WorkedMinutes, row.ExpectedMinutes, row.LateMinutes, row.OvertimeMinutes).AppendLine();
         var encoding = new UTF8Encoding(true);
         return encoding.GetPreamble().Concat(encoding.GetBytes(output.ToString())).ToArray();

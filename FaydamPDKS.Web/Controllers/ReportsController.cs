@@ -70,7 +70,7 @@ public sealed class ReportsController(IAttendanceReportService reports, TimeProv
         return (from ?? end.AddDays(-6), end);
     }
 
-    private static string Time(DateTimeOffset? value) => value?.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
+    private static string Time(DateTimeOffset? value) => value?.ToString("HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
     private static string Csv(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
     private static string StatusLabel(string status) => status switch { "Complete" => "Tamamlandı", "NoRecord" => "Kayıt yok", "NonWorkingDay" => "Çalışma dışı gün", "MissingEntry" => "Giriş eksik", "MissingExit" => "Çıkış eksik", "RemoteWork" => "Uzaktan çalışma", "FieldWork" => "Saha çalışması", _ => status };
     private static string WorkLocationLabel(string location) => location switch { "Remote" => "Uzaktan", "Field" => "Saha", _ => "Ofis" };

@@ -102,8 +102,8 @@ public sealed class AttendanceReportService(
                 continue;
             }
             rows.Add(new AttendanceReportRowDto(employee.Id, employee.EmployeeNumber, employee.Name, employee.Department?.Name ?? employee.DepartmentLegacy,
-                date, calendarLabel is null ? assignment?.Shift?.Name ?? "Varsayılan vardiya" : $"{calendarLabel} · {(assignment?.Shift?.Name ?? "Varsayılan vardiya")}", day.Status.ToString(), day.FirstEntry,
-                day.LastExit, day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes, location?.LocationType.ToString() ?? "Office", correction is null ? "QR" : "Correction", false,
+                date, calendarLabel is null ? assignment?.Shift?.Name ?? "Varsayılan vardiya" : $"{calendarLabel} · {(assignment?.Shift?.Name ?? "Varsayılan vardiya")}", day.Status.ToString(), ToLocal(day.FirstEntry, timeZone),
+                ToLocal(day.LastExit, timeZone), day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes, location?.LocationType.ToString() ?? "Office", correction is null ? "QR" : "Correction", false,
                 location?.ProjectName ?? location?.CustomerName ?? location?.Reason));
         }
         var orderedRows = employeeId.HasValue
@@ -140,4 +140,7 @@ public sealed class AttendanceReportService(
         try { return TimeZoneInfo.FindSystemTimeZoneById(id); }
         catch (TimeZoneNotFoundException) { return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"); }
     }
+
+    private static DateTimeOffset? ToLocal(DateTimeOffset? value, TimeZoneInfo timeZone) =>
+        value.HasValue ? TimeZoneInfo.ConvertTime(value.Value, timeZone) : null;
 }

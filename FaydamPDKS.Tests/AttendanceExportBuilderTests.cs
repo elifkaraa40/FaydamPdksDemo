@@ -13,7 +13,10 @@ public sealed class AttendanceExportBuilderTests
     public void Mobile_exports_are_utf8_valid_files_and_pdf_does_not_truncate_large_results()
     {
         var rows = Enumerable.Range(1, 46).Select(i => new AttendanceReportRowDto(Guid.NewGuid(), $"PER-{i:0000}", $"Personel {i}",
-            "Bölüm", new DateOnly(2026, 7, 1).AddDays((i - 1) % 20), "Vardiya", "Complete", null, null, 480, 480, 0, 0)).ToArray();
+            "Bölüm", new DateOnly(2026, 7, 1).AddDays((i - 1) % 20), "Vardiya", "Complete",
+            i == 1 ? new DateTimeOffset(2026, 7, 1, 8, 30, 0, TimeSpan.FromHours(3)) : null,
+            i == 1 ? new DateTimeOffset(2026, 7, 1, 18, 0, 0, TimeSpan.FromHours(3)) : null,
+            480, 480, 0, 0)).ToArray();
         var report = new AttendanceReportDto(new(2026, 7, 1), new(2026, 7, 20), rows);
 
         var csv = AttendanceExportBuilder.Csv(report);
@@ -39,7 +42,12 @@ public sealed class AttendanceExportBuilderTests
         Assert.Contains("Dönem:", sheet);
         Assert.Contains("PER-0046", sheet);
         Assert.Contains("Bölüm", sheet);
+        Assert.Contains("<t>08:30</t>", sheet);
+        Assert.Contains("<t>18:00</t>", sheet);
+        Assert.DoesNotContain("01.07.2026 08:30", sheet);
         Assert.NotNull(workbook.GetEntry("xl/styles.xml"));
+        var qaPath = Environment.GetEnvironmentVariable("MOBILE_EXCEL_QA_PATH");
+        if (!string.IsNullOrWhiteSpace(qaPath)) File.WriteAllBytes(qaPath, xlsx);
 
         var englishCsv = Encoding.UTF8.GetString(AttendanceExportBuilder.Csv(report, true));
         Assert.Contains("Employee No;Employee;Department", englishCsv);

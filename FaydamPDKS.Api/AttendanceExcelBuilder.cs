@@ -130,8 +130,8 @@ internal static class AttendanceExcelBuilder
         WriteTextCell(writer, Status(row.Status, english), statusStyle, $"F{rowNumber}");
         WriteTextCell(writer, WorkLocation(row.WorkLocation, english), textStyle, $"G{rowNumber}");
         WriteTextCell(writer, row.WorkLocationDetail, textStyle, $"H{rowNumber}");
-        WriteTextCell(writer, row.FirstEntry?.ToString("dd.MM.yyyy HH:mm"), textStyle, $"I{rowNumber}");
-        WriteTextCell(writer, row.LastExit?.ToString("dd.MM.yyyy HH:mm"), textStyle, $"J{rowNumber}");
+        WriteTextCell(writer, row.FirstEntry?.ToString("HH:mm"), textStyle, $"I{rowNumber}");
+        WriteTextCell(writer, row.LastExit?.ToString("HH:mm"), textStyle, $"J{rowNumber}");
         WriteNumberCell(writer, row.WorkedMinutes, numberStyle, $"K{rowNumber}");
         WriteNumberCell(writer, row.ExpectedMinutes, numberStyle, $"L{rowNumber}");
         WriteNumberCell(writer, row.LateMinutes, numberStyle, $"M{rowNumber}");

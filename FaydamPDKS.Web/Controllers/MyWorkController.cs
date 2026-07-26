@@ -235,7 +235,7 @@ public sealed class MyWorkController(
     }
 
     private bool TryUserId(out Guid id) => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out id);
-    private static string Time(DateTimeOffset? value) => value?.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
+    private static string Time(DateTimeOffset? value) => value?.ToString("HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
     private static string Csv(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
     private static string StatusLabel(string status) => status switch
     {
