@@ -1,16 +1,284 @@
 @model FaydamPDKS.Core.DTOs.WorkCalendarPageDto
 @using FaydamPDKS.Core.Enums
 @using System.Globalization
-@{ ViewData["Title"] = "Çalışma Takvimi"; }
-<section class="hero compact-hero"><div><p class="eyebrow">Puantaj kuralları</p><h1>Çalışma takvimi</h1><p>Resmi tatilleri ve hafta sonundaki özel çalışma günlerini tüm şirket veya işyeri bazında tanımlayın.</p></div><span class="summary-pill">@Model.Days.Count özel gün</span></section>
-@if (TempData["Success"] is string success) { <div class="alert alert-success" role="status">@success</div> }
-@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
-<div class="content-grid shift-grid">
-    <section class="panel" aria-labelledby="calendar-title"><div class="panel-heading"><div><p class="eyebrow">Özel günler</p><h2 id="calendar-title">Takvim kayıtları</h2></div></div>
-        @if (Model.Days.Count == 0) { <div class="panel-empty"><strong>Özel gün tanımlanmamış.</strong><p>Cumartesi ve pazar varsayılan olarak hafta tatilidir.</p></div> }
-        else { <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Tarih</th><th>Gün</th><th>Kapsam</th><th>Tür</th></tr></thead><tbody>@foreach (var item in Model.Days) { <tr><td><strong>@item.Date.ToString("dd.MM.yyyy")</strong><small>@item.Date.ToString("dddd", new CultureInfo("tr-TR"))</small></td><td>@item.Name</td><td>@item.ScopeName</td><td><span class="status @(item.DayType == CalendarDayType.Holiday ? "danger" : "success")">@(item.DayType == CalendarDayType.Holiday ? "Tatil" : "Çalışma günü")</span></td></tr> }</tbody></table></div> }
+@{
+    ViewData["Title"] = "Çalışma Takvimi";
+    var tr = CultureInfo.GetCultureInfo("tr-TR");
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var selectedDate = new DateOnly(Model.SelectedYear, Model.SelectedMonth, 1);
+    var previous = Model.ViewMode == "year" ? selectedDate.AddYears(-1) : selectedDate.AddMonths(-1);
+    var next = Model.ViewMode == "year" ? selectedDate.AddYears(1) : selectedDate.AddMonths(1);
+    var title = Model.ViewMode == "year"
+        ? Model.SelectedYear.ToString(CultureInfo.InvariantCulture)
+        : selectedDate.ToString("MMMM yyyy", tr);
+    var daysByDate = Model.Days.ToDictionary(x => x.Date);
+    var weekDays = new[] { "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz" };
+}
+
+<section class="hero compact-hero calendar-hero">
+    <div>
+        <p class="eyebrow">Puantaj kuralları</p>
+        <h1>Çalışma takvimi</h1>
+        <p>Türkiye resmî tatilleri sistem tarafından yenilenir; şirkete veya işyerine özel kuralları siz ekleyebilirsiniz.</p>
+    </div>
+    <span class="summary-pill">@Model.Days.Count takvim kaydı</span>
+</section>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success" role="status">@success</div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger" role="alert">@error</div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.HolidaySyncWarning))
+{
+    <div class="alert alert-warning calendar-warning" role="alert">
+        <strong>Takvim güncelleme bilgisi:</strong> @Model.HolidaySyncWarning
+        <span>Mevcut kayıtlar korunmuştur; sistem doğrulanmamış bir tarihi sessizce kullanmaz.</span>
+    </div>
+}
+
+<div class="content-grid calendar-layout">
+    <section class="panel calendar-panel" aria-labelledby="calendar-title">
+        <div class="calendar-toolbar">
+            <div class="calendar-navigation">
+                <a class="calendar-nav-button"
+                   asp-action="Index"
+                   asp-route-year="@previous.Year"
+                   asp-route-month="@previous.Month"
+                   asp-route-view="@Model.ViewMode"
+                   asp-route-workplaceId="@Model.SelectedWorkplaceId"
+                   aria-label="Önceki dönem">‹</a>
+                <div>
+                    <p class="eyebrow">Takvim görünümü</p>
+                    <h2 id="calendar-title">@title</h2>
+                </div>
+                <a class="calendar-nav-button"
+                   asp-action="Index"
+                   asp-route-year="@next.Year"
+                   asp-route-month="@next.Month"
+                   asp-route-view="@Model.ViewMode"
+                   asp-route-workplaceId="@Model.SelectedWorkplaceId"
+                   aria-label="Sonraki dönem">›</a>
+            </div>
+
+            <div class="calendar-toolbar-actions">
+                <div class="calendar-view-toggle" aria-label="Takvim görünümü">
+                    <a class="@(Model.ViewMode == "month" ? "active" : null)"
+                       asp-action="Index"
+                       asp-route-year="@Model.SelectedYear"
+                       asp-route-month="@Model.SelectedMonth"
+                       asp-route-view="month"
+                       asp-route-workplaceId="@Model.SelectedWorkplaceId">Aylık</a>
+                    <a class="@(Model.ViewMode == "year" ? "active" : null)"
+                       asp-action="Index"
+                       asp-route-year="@Model.SelectedYear"
+                       asp-route-month="@Model.SelectedMonth"
+                       asp-route-view="year"
+                       asp-route-workplaceId="@Model.SelectedWorkplaceId">Yıllık</a>
+                </div>
+
+                <form method="get" asp-action="Index" class="calendar-filter">
+                    <input type="hidden" name="year" value="@Model.SelectedYear" />
+                    <input type="hidden" name="month" value="@Model.SelectedMonth" />
+                    <input type="hidden" name="view" value="@Model.ViewMode" />
+                    <label for="calendarWorkplace">Takvim kapsamı</label>
+                    <select id="calendarWorkplace" name="workplaceId">
+                        <option value="">Şirket geneli</option>
+                        @foreach (var workplace in Model.Workplaces)
+                        {
+                            if (Model.SelectedWorkplaceId == workplace.Id)
+                            {
+                                <option value="@workplace.Id" selected>@workplace.Code · @workplace.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@workplace.Id">@workplace.Code · @workplace.Name</option>
+                            }
+                        }
+                    </select>
+                    <button class="calendar-filter-button" type="submit">Uygula</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="calendar-legend" aria-label="Takvim açıklamaları">
+            <span><i class="legend-official"></i> Resmî tatil</span>
+            <span><i class="legend-half"></i> Yarım gün</span>
+            <span><i class="legend-manual"></i> Yönetici kuralı</span>
+            <span><i class="legend-weekend"></i> Hafta sonu</span>
+        </div>
+
+        @if (Model.ViewMode == "year")
+        {
+            <div class="year-calendar">
+                @for (var month = 1; month <= 12; month++)
+                {
+                    var monthStart = new DateOnly(Model.SelectedYear, month, 1);
+                    var gridStart = monthStart.AddDays(-(((int)monthStart.DayOfWeek + 6) % 7));
+                    <article class="mini-calendar">
+                        <a asp-action="Index"
+                           asp-route-year="@Model.SelectedYear"
+                           asp-route-month="@month"
+                           asp-route-view="month"
+                           asp-route-workplaceId="@Model.SelectedWorkplaceId">
+                            <h3>@monthStart.ToString("MMMM", tr)</h3>
+                        </a>
+                        <div class="mini-calendar-weekdays">
+                            @foreach (var weekDay in weekDays)
+                            {
+                                <span>@weekDay[..1]</span>
+                            }
+                        </div>
+                        <div class="mini-calendar-grid">
+                            @for (var cell = 0; cell < 42; cell++)
+                            {
+                                var date = gridStart.AddDays(cell);
+                                var inMonth = date.Month == month;
+                                var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                                daysByDate.TryGetValue(date, out var item);
+                                var cellClass = "mini-calendar-day";
+                                if (!inMonth) cellClass += " outside";
+                                else if (item?.DayType == CalendarDayType.WorkingDayOverride) cellClass += " manual-working";
+                                else if (item?.IsHalfDay == true) cellClass += " half-day";
+                                else if (item?.DayType == CalendarDayType.Holiday) cellClass += item.IsSystemGenerated ? " official-holiday" : " manual-holiday";
+                                else if (isWeekend) cellClass += " weekend";
+                                if (date == today) cellClass += " today";
+                                <span class="@cellClass" title="@(item is null ? null : $"{item.Name} · {(item.IsHalfDay ? "Yarım gün" : item.DayType == CalendarDayType.Holiday ? "Tatil" : "Çalışma günü")}")">
+                                    @(inMonth ? date.Day.ToString(CultureInfo.InvariantCulture) : "")
+                                </span>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            var monthStart = new DateOnly(Model.SelectedYear, Model.SelectedMonth, 1);
+            var gridStart = monthStart.AddDays(-(((int)monthStart.DayOfWeek + 6) % 7));
+            <div class="month-calendar">
+                <div class="month-calendar-weekdays">
+                    @foreach (var weekDay in weekDays)
+                    {
+                        <span>@weekDay</span>
+                    }
+                </div>
+                <div class="month-calendar-grid">
+                    @for (var cell = 0; cell < 42; cell++)
+                    {
+                        var date = gridStart.AddDays(cell);
+                        var inMonth = date.Month == Model.SelectedMonth;
+                        var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                        daysByDate.TryGetValue(date, out var item);
+                        var cellClass = "calendar-day";
+                        if (!inMonth) cellClass += " outside";
+                        else if (item?.DayType == CalendarDayType.WorkingDayOverride) cellClass += " manual-working";
+                        else if (item?.IsHalfDay == true) cellClass += " half-day";
+                        else if (item?.DayType == CalendarDayType.Holiday) cellClass += item.IsSystemGenerated ? " official-holiday" : " manual-holiday";
+                        else if (isWeekend) cellClass += " weekend";
+                        if (date == today) cellClass += " today";
+                        <div class="@cellClass">
+                            <div class="calendar-day-heading">
+                                <time datetime="@date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@date.Day</time>
+                                @if (item is not null)
+                                {
+                                    <span class="calendar-source">@(item.IsSystemGenerated ? "Otomatik" : "Yönetici")</span>
+                                }
+                            </div>
+                            @if (item is not null)
+                            {
+                                <strong>@item.Name</strong>
+                                <small>
+                                    @if (item.DayType == CalendarDayType.WorkingDayOverride)
+                                    {
+                                        <text>Özel çalışma günü</text>
+                                    }
+                                    else if (item.IsHalfDay)
+                                    {
+                                        <text>Yarım gün · tatil 13.00'te başlar</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Tam gün tatil</text>
+                                    }
+                                </small>
+                            }
+                            else if (inMonth && isWeekend)
+                            {
+                                <small>Hafta tatili</small>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <footer class="calendar-sync-status">
+            <span>Kaynak: 2429 sayılı Kanun ve T.C. Diyanet İşleri Başkanlığı</span>
+            @if (Model.LastHolidaySyncAt.HasValue)
+            {
+                <span>Son başarılı güncelleme: @Model.LastHolidaySyncAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+            }
+        </footer>
     </section>
-    <aside class="panel create-panel" aria-labelledby="create-calendar-title"><div class="panel-heading"><div><p class="eyebrow">Yeni kural</p><h2 id="create-calendar-title">Özel gün ekle</h2></div></div><form asp-action="Create" method="post" class="admin-form">
-        <div class="form-field"><label for="Date">Tarih</label><input id="Date" name="Date" type="date" required /></div><div class="form-field"><label for="Name">Gün adı / açıklama</label><input id="Name" name="Name" maxlength="150" required placeholder="Örn. Cumhuriyet Bayramı" /></div><div class="form-field"><label for="DayType">Gün tipi</label><select id="DayType" name="DayType" required><option value="Holiday">Tatil / çalışma dışı</option><option value="WorkingDayOverride">Özel çalışma günü</option></select></div><div class="form-field"><label for="WorkplaceId">Kapsam</label><select id="WorkplaceId" name="WorkplaceId"><option value="">Tüm işyerleri</option>@foreach (var workplace in Model.Workplaces) { <option value="@workplace.Id">@workplace.Code · @workplace.Name</option> }</select><small>İşyeri kaydı, aynı tarihteki genel kuraldan önceliklidir.</small></div><button class="btn btn-primary w-100" type="submit">Takvime ekle</button>
-    </form></aside>
+
+    <aside class="panel create-panel" aria-labelledby="create-calendar-title">
+        <div class="panel-heading">
+            <div>
+                <p class="eyebrow">Yeni kural</p>
+                <h2 id="create-calendar-title">Özel gün ekle</h2>
+            </div>
+        </div>
+        <form asp-action="Create" method="post" class="admin-form">
+            <input type="hidden" name="calendarYear" value="@Model.SelectedYear" />
+            <input type="hidden" name="calendarMonth" value="@Model.SelectedMonth" />
+            <input type="hidden" name="calendarView" value="@Model.ViewMode" />
+            <input type="hidden" name="selectedWorkplaceId" value="@Model.SelectedWorkplaceId" />
+            <div class="form-field">
+                <label for="Date">Tarih</label>
+                <input id="Date" name="Date" type="date" required value="@($"{Model.SelectedYear:D4}-{Model.SelectedMonth:D2}-01")" />
+            </div>
+            <div class="form-field">
+                <label for="Name">Gün adı / açıklama</label>
+                <input id="Name" name="Name" maxlength="150" required placeholder="Örn. Şirket kuruluş günü" />
+            </div>
+            <div class="form-field">
+                <label for="DayType">Gün tipi</label>
+                <select id="DayType" name="DayType" required>
+                    <option value="Holiday">Tatil / çalışma dışı</option>
+                    <option value="WorkingDayOverride">Özel çalışma günü</option>
+                </select>
+            </div>
+            <label class="calendar-checkbox">
+                <input name="IsHalfDay" type="checkbox" value="true" />
+                <span><strong>Yarım gün tatil</strong><small>Tatil 13.00'te başlar ve izin hesabı 0,5 gün olur. Planlı öğle arası 12.30'da başlıyorsa puantajda beklenen çıkış 12.30 olur.</small></span>
+            </label>
+            <div class="form-field">
+                <label for="WorkplaceId">Kapsam</label>
+                <select id="WorkplaceId" name="WorkplaceId">
+                    <option value="">Tüm işyerleri</option>
+                    @foreach (var workplace in Model.Workplaces)
+                    {
+                        if (Model.SelectedWorkplaceId == workplace.Id)
+                        {
+                            <option value="@workplace.Id" selected>@workplace.Code · @workplace.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@workplace.Id">@workplace.Code · @workplace.Name</option>
+                        }
+                    }
+                </select>
+                <small>İşyeri kuralı, aynı tarihteki şirket geneli kuralından önceliklidir.</small>
+            </div>
+            <button class="btn btn-primary w-100" type="submit">Takvime ekle</button>
+        </form>
+        <div class="calendar-help">
+            <strong>Resmî tatilleri eklemeniz gerekmez.</strong>
+            <p>Sistem bunları her yıl otomatik oluşturur. Bu form yalnızca şirkete veya işyerine özel istisnalar içindir.</p>
+        </div>
+    </aside>
 </div>

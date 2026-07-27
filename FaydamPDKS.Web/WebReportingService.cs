@@ -101,7 +101,7 @@ public sealed class WebReportingService(AppDbContext db, IWorkCalendarResolver w
     {
         var count = 0d;
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
-            if ((await workCalendar.ResolveAsync(employeeId, date, cancellationToken)).IsWorkingDay) count++;
+            count += (await workCalendar.ResolveAsync(employeeId, date, cancellationToken)).WorkdayWeight;
         return portion == LeaveDayPortion.FullDay ? count : Math.Min(.5, count);
     }
 

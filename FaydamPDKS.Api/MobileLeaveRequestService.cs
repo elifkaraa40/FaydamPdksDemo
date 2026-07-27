@@ -79,7 +79,7 @@ public sealed class MobileLeaveRequestService(
     {
         var count = 0d;
         for (var date = request.StartDate; date <= request.EndDate; date = date.AddDays(1))
-            if ((await workCalendar.ResolveAsync(request.UserId, date, cancellationToken)).IsWorkingDay) count++;
+            count += (await workCalendar.ResolveAsync(request.UserId, date, cancellationToken)).WorkdayWeight;
         return request.DayPortion == LeaveDayPortion.FullDay ? count : Math.Min(.5, count);
     }
 

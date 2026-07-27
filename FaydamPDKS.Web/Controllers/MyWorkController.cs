@@ -219,7 +219,7 @@ public sealed class MyWorkController(
         {
             var count = 0d;
             for (var date = leave.StartDate; date <= leave.EndDate; date = date.AddDays(1))
-                if ((await workCalendar.ResolveAsync(userId, date, cancellationToken)).IsWorkingDay) count++;
+                count += (await workCalendar.ResolveAsync(userId, date, cancellationToken)).WorkdayWeight;
             result[leave.Id] = leave.DayPortion == LeaveDayPortion.FullDay ? count : Math.Min(.5, count);
         }
         return result;

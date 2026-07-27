@@ -30,6 +30,8 @@ public static class DependencyInjection
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();
         services.AddScoped<IWorkCalendarResolver, WorkCalendarResolver>();
         services.AddScoped<IWorkCalendarRepository, WorkCalendarRepository>();
+        services.AddSingleton<IPublicHolidayProvider, DiyanetPublicHolidayProvider>();
+        services.AddScoped<IPublicHolidaySyncService, PublicHolidaySyncService>();
         services.AddScoped<IAttendanceTerminalService, AttendanceTerminalService>();
         services.AddScoped<IAttendanceQrService, AttendanceQrService>();
         services.AddScoped<IPersonalDataExportService, PersonalDataExportService>();

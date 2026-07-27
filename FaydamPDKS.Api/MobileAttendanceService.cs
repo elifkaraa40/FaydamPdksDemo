@@ -44,6 +44,7 @@ public sealed class MobileAttendanceService(
         var events = correction is null ? todayEvents : CorrectionEvents(employeeId, correction, timeZone);
 
         var calendar = await workCalendar.ResolveAsync(employeeId, workDate, cancellationToken);
+        shift = ApplyCalendarLimit(shift, calendar);
         var breakMinutes = await GetBreakMinutesAsync(employeeId, workDate, timeZone, cancellationToken);
         var result = _calculator.Calculate(workDate, shift, events, timeZone, calendar.IsWorkingDay, breakMinutes);
         return new TodayAttendanceDto(
@@ -93,6 +94,7 @@ public sealed class MobileAttendanceService(
                 ? CorrectionEvents(employeeId, correction, timeZone)
                 : events;
             var calendar = await workCalendar.ResolveAsync(employeeId, date, cancellationToken);
+            shift = ApplyCalendarLimit(shift, calendar);
             var breakMinutes = await GetBreakMinutesAsync(employeeId, date, timeZone, cancellationToken);
             var day = _calculator.Calculate(date, shift, dayEvents, timeZone, calendar.IsWorkingDay, breakMinutes);
             result.Add(new TodayAttendanceDto(
@@ -142,7 +144,9 @@ public sealed class MobileAttendanceService(
         TimeOnly.Parse(configuration["Attendance:DefaultShiftEnd"] ?? "18:00"),
         configuration.GetValue("Attendance:LateToleranceMinutes", 5),
         configuration.GetValue("Attendance:EarlyLeaveToleranceMinutes", 5),
-        configuration.GetValue("Attendance:BreakMinutes", 60));
+        configuration.GetValue("Attendance:BreakMinutes", 60),
+        ParseOptionalTime(configuration["Attendance:ScheduledBreakStart"]),
+        ParseOptionalTime(configuration["Attendance:ScheduledBreakEnd"]));
 
     private Task<int?> GetBreakMinutesAsync(Guid employeeId, DateOnly date, TimeZoneInfo timeZone, CancellationToken cancellationToken)
     {
@@ -155,6 +159,16 @@ public sealed class MobileAttendanceService(
 
     private async Task<ShiftDefinition> ResolveShiftAsync(Guid employeeId, DateOnly workDate, CancellationToken cancellationToken) =>
         await shiftResolver.ResolveAsync(employeeId, workDate, cancellationToken) ?? CreateDefaultShift();
+
+    private static ShiftDefinition ApplyCalendarLimit(ShiftDefinition shift, WorkdayResolution calendar)
+    {
+        return calendar.WorkingUntil.HasValue
+            ? shift.ShortenForHoliday(calendar.WorkingUntil.Value)
+            : shift;
+    }
+
+    private static TimeOnly? ParseOptionalTime(string? value) =>
+        TimeOnly.TryParse(value, out var time) ? time : null;
 
     private static AttendanceEvent[] CorrectionEvents(Guid employeeId, AttendanceCorrectionRequest correction, TimeZoneInfo timeZone)
     {

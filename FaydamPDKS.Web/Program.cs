@@ -67,6 +67,7 @@ builder.Services.AddScoped<IShiftAdminService, WebShiftAdminService>();
 builder.Services.AddScoped<IWebAttendanceCorrectionService, WebAttendanceCorrectionService>();
 builder.Services.AddScoped<IOrganizationAdminService, WebOrganizationAdminService>();
 builder.Services.AddScoped<IWorkCalendarAdminService, WebWorkCalendarAdminService>();
+builder.Services.AddHostedService<PublicHolidayCalendarWorker>();
 builder.Services.AddScoped<WebReportingService>();
 builder.Services.AddRateLimiter(options =>
 {

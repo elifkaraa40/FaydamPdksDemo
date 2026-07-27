@@ -14,8 +14,14 @@ public sealed class WorkCalendarResolver(AppDbContext context) : IWorkCalendarRe
             .Where(x => x.Date == date && (x.WorkplaceId == workplaceId || x.WorkplaceId == null))
             .OrderByDescending(x => x.WorkplaceId.HasValue).FirstOrDefaultAsync(cancellationToken);
         if (specialDay is not null)
-            return new(specialDay.DayType == CalendarDayType.WorkingDayOverride, specialDay.Name);
+        {
+            if (specialDay.DayType == CalendarDayType.WorkingDayOverride)
+                return new(true, specialDay.Name, 1);
+            if (specialDay.IsHalfDay)
+                return new(true, specialDay.Name, .5, new TimeOnly(13, 0));
+            return new(false, specialDay.Name, 0);
+        }
         var weekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-        return new(!weekend, weekend ? "Hafta tatili" : null);
+        return new(!weekend, weekend ? "Hafta tatili" : null, weekend ? 0 : 1);
     }
 }

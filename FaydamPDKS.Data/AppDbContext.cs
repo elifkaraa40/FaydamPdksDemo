@@ -28,6 +28,7 @@ namespace FaydamPDKS.Data
         public DbSet<Workplace> Workplaces { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<WorkCalendarDay> WorkCalendarDays { get; set; }
+        public DbSet<HolidayCalendarSyncState> HolidayCalendarSyncStates { get; set; }
         public DbSet<AttendanceTerminal> AttendanceTerminals { get; set; }
         public DbSet<AttendanceQrCode> AttendanceQrCodes { get; set; }
         public DbSet<BreakRecord> BreakRecords { get; set; }
@@ -202,6 +203,7 @@ namespace FaydamPDKS.Data
                 .HasFilter("workplace_id IS NOT NULL");
             modelBuilder.Entity<WorkCalendarDay>().HasIndex(x => x.Date).IsUnique()
                 .HasFilter("workplace_id IS NULL");
+            modelBuilder.Entity<HolidayCalendarSyncState>().Property(x => x.Year).ValueGeneratedNever();
             modelBuilder.Entity<AttendanceTerminal>().HasOne(x => x.Workplace).WithMany().HasForeignKey(x => x.WorkplaceId)
                 .OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<AttendanceTerminal>().HasIndex(x => x.SerialNumber).IsUnique();

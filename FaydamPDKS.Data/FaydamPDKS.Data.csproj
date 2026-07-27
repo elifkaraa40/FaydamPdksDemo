@@ -24,4 +24,8 @@
     <ProjectReference Include="..\FaydamPDKS.Core\FaydamPDKS.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\tr-public-holidays-fallback.json" />
+  </ItemGroup>
+
 </Project>

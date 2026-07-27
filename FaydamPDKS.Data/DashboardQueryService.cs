@@ -46,6 +46,12 @@ public sealed class DashboardQueryService(
             .ToListAsync(cancellationToken);
         var pendingLeaveCount = await context.LeaveRequests.AsNoTracking()
             .CountAsync(x => x.Status == LeaveRequestStatus.Pending, cancellationToken);
+        var todayWorkplaces = await context.Users.AsNoTracking()
+            .Select(x => new { x.Id, x.WorkplaceId })
+            .ToDictionaryAsync(x => x.Id, x => x.WorkplaceId, cancellationToken);
+        var todayCalendarDays = await context.WorkCalendarDays.AsNoTracking()
+            .Where(x => x.Date == today)
+            .ToListAsync(cancellationToken);
 
         var presentSet = presentUserIds.ToHashSet();
         var lateSet = lateUserIds.ToHashSet();
@@ -54,7 +60,18 @@ public sealed class DashboardQueryService(
         var latePersonnel = personnel.Where(x => lateSet.Contains(x.Id)).ToArray();
         var onLeavePersonnel = personnel.Where(x => onLeaveSet.Contains(x.Id)).ToArray();
         var missingRecordPersonnel = personnel
-            .Where(x => !presentSet.Contains(x.Id) && !onLeaveSet.Contains(x.Id))
+            .Where(x =>
+            {
+                var workplaceId = todayWorkplaces.GetValueOrDefault(x.Id);
+                var specialDay = todayCalendarDays
+                    .Where(day => day.WorkplaceId == null || day.WorkplaceId == workplaceId)
+                    .OrderByDescending(day => day.WorkplaceId.HasValue)
+                    .FirstOrDefault();
+                var isWorkingDay = specialDay is not null
+                    ? specialDay.DayType == CalendarDayType.WorkingDayOverride || specialDay.IsHalfDay
+                    : today.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
+                return isWorkingDay && !presentSet.Contains(x.Id) && !onLeaveSet.Contains(x.Id);
+            })
             .ToArray();
 
         var historyWindowStart = today.AddDays(-21);
@@ -73,7 +90,7 @@ public sealed class DashboardQueryService(
                 .OrderByDescending(x => x.WorkplaceId.HasValue)
                 .FirstOrDefault();
             return specialDay is not null
-                ? specialDay.DayType == CalendarDayType.WorkingDayOverride
+                ? specialDay.DayType == CalendarDayType.WorkingDayOverride || specialDay.IsHalfDay
                 : date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
         }
 

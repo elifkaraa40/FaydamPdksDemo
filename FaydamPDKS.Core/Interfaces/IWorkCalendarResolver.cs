@@ -1,6 +1,10 @@
 namespace FaydamPDKS.Core.Interfaces;
 
-public sealed record WorkdayResolution(bool IsWorkingDay, string? Name);
+public sealed record WorkdayResolution(
+    bool IsWorkingDay,
+    string? Name,
+    double WorkdayWeight = 1,
+    TimeOnly? WorkingUntil = null);
 
 public interface IWorkCalendarResolver
 {
