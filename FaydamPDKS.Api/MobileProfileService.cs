@@ -51,5 +51,5 @@ public sealed class MobileProfileService(IUserRepository users, IUnitOfWork unit
         x.Id, x.Name, x.Email, x.Role?.Name ?? "Personel", x.PhoneNumber,
         x.ProfileImageUrl, x.IsEmailNotificationEnabled, x.IsSmsNotificationEnabled,
         string.IsNullOrWhiteSpace(x.EmployeeNumber) ? null : x.EmployeeNumber,
-        x.Department?.Name ?? x.DepartmentLegacy, x.Workplace?.Name, x.HireDate);
+        x.Department?.Name ?? x.DepartmentLegacy, x.Workplace?.Name, x.HireDate, x.BirthDate);
 }

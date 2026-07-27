@@ -143,13 +143,19 @@ public sealed class MobileLeaveRequestServiceTests
         return new MobileLeaveRequestService(
             new LeaveRequestRepository(context), new UnitOfWork(context),
             new WorkCalendarResolver(context),
-            new TestTimeProvider(new DateTimeOffset(2026, 7, 14, 8, 0, 0, TimeSpan.Zero)), config);
+            new TestTimeProvider(new DateTimeOffset(2026, 7, 14, 8, 0, 0, TimeSpan.Zero)), config,
+            new AnnualLeaveService(context, new WorkCalendarResolver(context),
+                new TestTimeProvider(new DateTimeOffset(2026, 7, 14, 8, 0, 0, TimeSpan.Zero))));
     }
 
     private static async Task<Guid> SeedUserAsync(AppDbContext context)
     {
         var role = new Role { Id = Guid.NewGuid(), Name = "Personel", NormalizedName = "PERSONEL" };
-        var user = new User { Id = Guid.NewGuid(), Name = "Test", Email = "test@faydam.com", RoleId = role.Id, Role = role };
+        var user = new User
+        {
+            Id = Guid.NewGuid(), Name = "Test", Email = "test@faydam.com", RoleId = role.Id, Role = role,
+            HireDate = new DateOnly(2020, 1, 1), BirthDate = new DateOnly(1990, 1, 1)
+        };
         context.AddRange(role, user);
         await context.SaveChangesAsync();
         return user.Id;

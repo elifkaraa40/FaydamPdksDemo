@@ -20,6 +20,20 @@ public sealed class MobileLeaveRequestsController(ILeaveRequestService leaveRequ
         return Ok(await leaveRequests.GetMineAsync(userId, cancellationToken));
     }
 
+    [HttpGet("annual-balance")]
+    public async Task<IActionResult> GetAnnualBalance(CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId)) return UnauthorizedError();
+        try
+        {
+            return Ok(await leaveRequests.GetAnnualBalanceAsync(userId, cancellationToken));
+        }
+        catch (AnnualLeaveException ex)
+        {
+            return Conflict(Error(ex.Code, ex.Message));
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(CreateLeaveRequestDto request, CancellationToken cancellationToken)
     {
@@ -32,6 +46,10 @@ public sealed class MobileLeaveRequestsController(ILeaveRequestService leaveRequ
         catch (ArgumentException ex)
         {
             return BadRequest(Error("INVALID_LEAVE_REQUEST", ex.Message));
+        }
+        catch (AnnualLeaveException ex)
+        {
+            return Conflict(Error(ex.Code, ex.Message));
         }
         catch (LeaveOverlapException ex)
         {

@@ -34,6 +34,30 @@ public sealed class MobileAuthController(
                 "EMAIL_ALREADY_REGISTERED",
                 "Bu e-posta adresiyle daha önce kayıt oluşturulmuş. Giriş ekranını kullanın."));
         }
+        catch (InvalidOperationException ex) when (ex.Message == "HIRE_DATE_REQUIRED")
+        {
+            return BadRequest(Error(
+                "HIRE_DATE_REQUIRED",
+                "İşe giriş tarihi zorunludur. Yıllık izin hakkınız bu tarihe göre hesaplanır."));
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "BIRTH_DATE_REQUIRED")
+        {
+            return BadRequest(Error(
+                "BIRTH_DATE_REQUIRED",
+                "Doğum tarihi zorunludur. Yaşa bağlı yıllık izin hakkınız bu tarihe göre hesaplanır."));
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "HIRE_DATE_CANNOT_BE_FUTURE")
+        {
+            return BadRequest(Error(
+                "HIRE_DATE_CANNOT_BE_FUTURE",
+                "İşe giriş tarihi bugünden ileri bir tarih olamaz."));
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "BIRTH_DATE_MUST_BE_BEFORE_HIRE_DATE")
+        {
+            return BadRequest(Error(
+                "BIRTH_DATE_MUST_BE_BEFORE_HIRE_DATE",
+                "Doğum tarihi işe giriş tarihinden önce olmalıdır."));
+        }
     }
 
     [AllowAnonymous]

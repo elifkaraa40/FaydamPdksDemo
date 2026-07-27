@@ -10,15 +10,17 @@ public sealed class WebEmployeeAdminService(
     IRoleRepository roles,
     IOrganizationRepository organizations,
     IAuditTrail auditTrail,
-    IUnitOfWork unitOfWork) : IEmployeeAdminService
+    IUnitOfWork unitOfWork,
+    TimeProvider? timeProvider = null) : IEmployeeAdminService
 {
     private static readonly SemaphoreSlim EmployeeNumberLock = new(1, 1);
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
 
     public async Task<EmployeeAdminPageDto> GetPageAsync(CancellationToken cancellationToken = default)
     {
         var employees = (await users.GetAllWithRoleAsync(cancellationToken)).Select(x => new EmployeeListItemDto(
             x.Id, x.EmployeeNumber, x.Name, x.Email, x.PhoneNumber, x.Workplace?.Name, x.Department?.Name ?? x.DepartmentLegacy, x.HireDate,
-            x.Role?.Name ?? "Tanımsız", x.IsActive)).ToArray();
+            x.BirthDate, x.Role?.Name ?? "Tanımsız", x.IsActive)).ToArray();
         var roleOptions = (await roles.GetAllAsync(cancellationToken)).Select(x => new RoleOptionDto(x.Id, x.Name, x.Description)).ToArray();
         var departmentOptions = (await organizations.GetDepartmentsAsync(cancellationToken)).Where(x => x.IsActive && x.Workplace.IsActive)
             .Select(x => new DepartmentOptionDto(x.Id, x.WorkplaceId, x.Workplace.Name, x.Name)).ToArray();
@@ -31,7 +33,8 @@ public sealed class WebEmployeeAdminService(
         return user is null ? null : new UpdateEmployeeDto
         {
             Id = user.Id, EmployeeNumber = user.EmployeeNumber, FullName = user.Name,
-            Email = user.Email, PhoneNumber = user.PhoneNumber, DepartmentId = user.DepartmentId, HireDate = user.HireDate, RoleId = user.RoleId
+            Email = user.Email, PhoneNumber = user.PhoneNumber, DepartmentId = user.DepartmentId, HireDate = user.HireDate,
+            BirthDate = user.BirthDate, RoleId = user.RoleId
         };
     }
 
@@ -42,6 +45,7 @@ public sealed class WebEmployeeAdminService(
         await ValidateUniqueAsync(email, null, null, cancellationToken);
         if (phone is not null && await users.PhoneNumberExistsAsync(phone, null, cancellationToken)) throw new InvalidOperationException("Bu telefon numarası başka bir personelde kullanılıyor.");
         if (!await roles.ExistsAsync(request.RoleId, cancellationToken)) throw new InvalidOperationException("Seçilen rol bulunamadı.");
+        ValidateEmploymentDates(request.HireDate, request.BirthDate);
         var department = await ResolveDepartmentAsync(request.DepartmentId, cancellationToken);
 
         await EmployeeNumberLock.WaitAsync(cancellationToken);
@@ -52,12 +56,12 @@ public sealed class WebEmployeeAdminService(
             {
                 Id = Guid.NewGuid(), EmployeeNumber = employeeNumber, Name = request.FullName.Trim(), Email = email, PhoneNumber = phone,
                 DepartmentId = department?.Id, WorkplaceId = department?.WorkplaceId, DepartmentLegacy = department?.Name,
-                HireDate = request.HireDate, RoleId = request.RoleId,
+                HireDate = request.HireDate, BirthDate = request.BirthDate, RoleId = request.RoleId,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.TemporaryPassword), IsActive = true
             };
             await users.AddAsync(user, cancellationToken);
             await auditTrail.RecordAsync(actorId, "Employee.Created", nameof(User), user.Id.ToString(), null,
-                new { user.EmployeeNumber, user.Name, user.Email, user.WorkplaceId, user.DepartmentId, user.HireDate, user.RoleId, user.IsActive }, correlationId, cancellationToken);
+                new { user.EmployeeNumber, user.Name, user.Email, user.WorkplaceId, user.DepartmentId, user.HireDate, user.BirthDate, user.RoleId, user.IsActive }, correlationId, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             return user.Id;
         }
@@ -74,8 +78,9 @@ public sealed class WebEmployeeAdminService(
         await ValidateUniqueAsync(email, employeeNumber, user.Id, cancellationToken);
         if (phone is not null && await users.PhoneNumberExistsAsync(phone, user.Id, cancellationToken)) throw new InvalidOperationException("Bu telefon numarası başka bir personelde kullanılıyor.");
         if (!await roles.ExistsAsync(request.RoleId, cancellationToken)) throw new InvalidOperationException("Seçilen rol bulunamadı.");
+        ValidateEmploymentDates(request.HireDate, request.BirthDate);
         var department = await ResolveDepartmentAsync(request.DepartmentId, cancellationToken);
-        var oldValues = new { user.EmployeeNumber, user.Name, user.Email, user.PhoneNumber, user.WorkplaceId, user.DepartmentId, user.HireDate, user.RoleId };
+        var oldValues = new { user.EmployeeNumber, user.Name, user.Email, user.PhoneNumber, user.WorkplaceId, user.DepartmentId, user.HireDate, user.BirthDate, user.RoleId };
 
         user.EmployeeNumber = employeeNumber;
         user.Name = request.FullName.Trim();
@@ -85,9 +90,10 @@ public sealed class WebEmployeeAdminService(
         user.WorkplaceId = department?.WorkplaceId;
         user.DepartmentLegacy = department?.Name;
         user.HireDate = request.HireDate;
+        user.BirthDate = request.BirthDate;
         user.RoleId = request.RoleId;
         await auditTrail.RecordAsync(actorId, "Employee.Updated", nameof(User), user.Id.ToString(), oldValues,
-            new { user.EmployeeNumber, user.Name, user.Email, user.WorkplaceId, user.DepartmentId, user.HireDate, user.RoleId }, correlationId, cancellationToken);
+            new { user.EmployeeNumber, user.Name, user.Email, user.WorkplaceId, user.DepartmentId, user.HireDate, user.BirthDate, user.RoleId }, correlationId, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }
@@ -128,6 +134,20 @@ public sealed class WebEmployeeAdminService(
             throw new InvalidOperationException("Bu e-posta adresi başka bir personelde kullanılıyor.");
         if (employeeNumber is not null && await users.EmployeeNumberExistsAsync(employeeNumber, excludingId, cancellationToken))
             throw new InvalidOperationException("Bu sicil numarası başka bir personelde kullanılıyor.");
+    }
+
+    private void ValidateEmploymentDates(DateOnly? hireDate, DateOnly? birthDate)
+    {
+        if (!hireDate.HasValue)
+            throw new InvalidOperationException("İşe giriş tarihi zorunludur. Yıllık izin hakkı bu tarihe göre hesaplanır.");
+        if (!birthDate.HasValue)
+            throw new InvalidOperationException("Doğum tarihi zorunludur. Yaşa bağlı yıllık izin hakkı bu tarihe göre hesaplanır.");
+
+        var today = DateOnly.FromDateTime(_timeProvider.GetLocalNow().DateTime);
+        if (hireDate.Value > today)
+            throw new InvalidOperationException("İşe giriş tarihi bugünden ileri bir tarih olamaz.");
+        if (birthDate.Value >= hireDate.Value)
+            throw new InvalidOperationException("Doğum tarihi işe giriş tarihinden önce olmalıdır.");
     }
 
     private async Task<string> GenerateEmployeeNumberAsync(CancellationToken cancellationToken)

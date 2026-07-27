@@ -32,7 +32,7 @@ public sealed class OrganizationServiceTests
         await context.SaveChangesAsync();
         var service = new WebEmployeeAdminService(new UserRepository(context), new RoleRepository(context), new OrganizationRepository(context), new AuditTrail(context, TimeProvider.System), new UnitOfWork(context));
 
-        await service.CreateAsync(new CreateEmployeeDto { EmployeeNumber = "PER-0400", FullName = "Organizasyon Test", Email = "org@faydam.com", DepartmentId = department.Id, RoleId = role.Id, TemporaryPassword = "StrongPassword123!" }, Guid.NewGuid());
+        await service.CreateAsync(new CreateEmployeeDto { EmployeeNumber = "PER-0400", FullName = "Organizasyon Test", Email = "org@faydam.com", DepartmentId = department.Id, HireDate = new DateOnly(2020, 1, 1), BirthDate = new DateOnly(1990, 1, 1), RoleId = role.Id, TemporaryPassword = "StrongPassword123!" }, Guid.NewGuid());
 
         var employee = Assert.Single(context.Users);
         Assert.Equal(workplace.Id, employee.WorkplaceId);

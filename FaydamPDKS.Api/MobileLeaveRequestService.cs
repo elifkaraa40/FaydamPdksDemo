@@ -12,6 +12,7 @@ public sealed class MobileLeaveRequestService(
     IWorkCalendarResolver workCalendar,
     TimeProvider timeProvider,
     IConfiguration configuration,
+    IAnnualLeaveService annualLeave,
     IManagerNotificationService? managerNotifications = null) : ILeaveRequestService
 {
     public async Task<IReadOnlyList<LeaveRequestDto>> GetMineAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -21,6 +22,9 @@ public sealed class MobileLeaveRequestService(
             result.Add(await MapAsync(item, cancellationToken));
         return result;
     }
+
+    public Task<AnnualLeaveBalanceDto> GetAnnualBalanceAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        annualLeave.GetBalanceAsync(userId, cancellationToken);
 
     public async Task<LeaveRequestDto> CreateAsync(Guid userId, CreateLeaveRequestDto request, CancellationToken cancellationToken = default)
     {
@@ -38,6 +42,9 @@ public sealed class MobileLeaveRequestService(
             userId, request.StartDate, request.EndDate, cancellationToken);
         if (overlap is not null)
             throw new LeaveOverlapException(overlap.StartDate, overlap.EndDate);
+        if (request.LeaveType == LeaveType.Annual)
+            await annualLeave.EnsureCanRequestAsync(
+                userId, request.StartDate, request.EndDate, request.DayPortion, cancellationToken);
 
         var entity = new LeaveRequest
         {

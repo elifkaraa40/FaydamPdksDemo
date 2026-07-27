@@ -13,6 +13,7 @@ public sealed record MyWorkViewModel(
 {
     public IReadOnlyList<AttendanceCorrectionRequest> CorrectionRequests => Corrections ?? [];
     public IReadOnlyDictionary<Guid, double> LeaveWorkDayCounts { get; init; } = new Dictionary<Guid, double>();
+    public AnnualLeaveBalanceDto? AnnualLeaveBalance { get; init; }
     public int WorkedMinutes => Attendance.Sum(x => x.WorkedMinutes);
     public int ExpectedMinutes => Attendance.Sum(x => x.ExpectedMinutes);
     public int OvertimeMinutes => Attendance.Sum(x => x.OvertimeMinutes);

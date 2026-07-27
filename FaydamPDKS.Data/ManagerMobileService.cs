@@ -48,7 +48,7 @@ public sealed class ManagerMobileService(
         var query = ScopeUsers(db.Users.AsNoTracking(), scope);
         query = query.Where(x => x.AccountStatus == (status ?? AccountStatus.PendingApproval)).OrderBy(x => x.Name);
         return await PageAsync(query.Select(x => new ManagerRegistrationDto(x.Id, x.Name, x.Email, x.PhoneNumber,
-            x.AccountStatus, x.EmployeeNumber, x.DepartmentId)), page, pageSize, ct);
+            x.AccountStatus, x.EmployeeNumber, x.DepartmentId, x.HireDate, x.BirthDate)), page, pageSize, ct);
     }
 
     public async Task<bool> ReviewRegistrationAsync(Guid id, Guid managerId, ReviewRegistrationDto request, string? correlationId, CancellationToken ct = default)
@@ -60,6 +60,9 @@ public sealed class ManagerMobileService(
         var old = new { user.AccountStatus, user.EmployeeNumber, user.DepartmentId, user.WorkplaceId, user.IsActive };
         if (request.Approve)
         {
+            if (!user.HireDate.HasValue || !user.BirthDate.HasValue)
+                throw new InvalidOperationException("İşe giriş ve doğum tarihi eksik olan mobil kayıt onaylanamaz. Bilgileri web Personel Yönetimi ekranından tamamlayın.");
+
             await EmployeeNumberLock.WaitAsync(ct);
             try
             {
@@ -93,7 +96,7 @@ public sealed class ManagerMobileService(
             request.Approve ? "Hesabınız onaylandı" : "Kaydınız onaylanmadı",
             request.Approve ? $"PDKS hesabınız {user.EmployeeNumber} sicil numarasıyla kullanıma açıldı." : AppendNote("Detay için işyerinizle iletişime geçin.", request.Note), user.Id));
         await audit.RecordAsync(managerId, request.Approve ? "Registration.Approved" : "Registration.Rejected", nameof(User), user.Id.ToString(), old,
-            new { user.AccountStatus, user.EmployeeNumber, user.DepartmentId, user.WorkplaceId, user.IsActive, Note = Clean(request.Note) }, correlationId, ct);
+            new { user.AccountStatus, user.EmployeeNumber, user.DepartmentId, user.WorkplaceId, user.HireDate, user.BirthDate, user.IsActive, Note = Clean(request.Note) }, correlationId, ct);
         await db.SaveChangesAsync(ct);
         return true;
     }

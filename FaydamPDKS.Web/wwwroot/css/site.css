@@ -40,6 +40,10 @@ body { margin:0; background:var(--canvas); color:var(--ink); font-family:Inter,u
 .admin-form .form-field small { display:block; margin-top:6px; color:var(--muted); font-size:.75rem; }
 .wide-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 18px; max-width:900px; }
 .form-actions { grid-column:1/-1; display:flex; justify-content:flex-end; gap:10px; margin-top:8px; }
+.date-part-input { display:grid; grid-template-columns:minmax(72px,.7fr) minmax(118px,1.25fr) minmax(86px,.85fr); gap:8px; }
+.date-part-input select,.date-part-input input { min-width:0; margin:0; }
+.date-part-input input { text-align:center; }
+@media (max-width:420px) { .date-part-input { grid-template-columns:1fr 1.25fr 1fr; gap:6px; } }
 .edit-panel { max-width:980px; }
 .shift-grid { grid-template-columns:minmax(0,2fr) minmax(330px,.8fr); }
 .form-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
@@ -632,3 +636,15 @@ details summary { cursor:pointer; color:var(--brand); font-size:.8rem; font-weig
 @media (max-width:1200px) { .calendar-layout { grid-template-columns:1fr; }.year-calendar { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media (max-width:850px) { .calendar-toolbar { align-items:stretch; flex-direction:column; }.calendar-toolbar-actions { justify-content:space-between; }.year-calendar { grid-template-columns:repeat(2,minmax(0,1fr)); }.calendar-day { min-height:90px; }.calendar-day strong { font-size:.6rem; }.calendar-source { display:none; } }
 @media (max-width:600px) { .calendar-toolbar-actions { align-items:stretch; flex-direction:column; }.calendar-filter select { width:100%; }.month-calendar { overflow-x:auto; padding:0 10px 12px; }.month-calendar-weekdays,.month-calendar-grid { min-width:700px; }.year-calendar { grid-template-columns:1fr; }.calendar-sync-status { flex-direction:column; }.calendar-navigation { justify-content:space-between; } }
+
+/* Annual leave balance */
+.leave-balance-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; padding:22px 24px 0; }
+.leave-balance-card { border:1px solid var(--line); border-radius:14px; background:#f8fafc; padding:16px; }
+.leave-balance-card span { display:block; color:var(--muted); font-size:.72rem; font-weight:750; }
+.leave-balance-card strong { display:block; margin-top:5px; color:var(--ink); font-size:1.35rem; letter-spacing:-.03em; }
+.leave-balance-details { padding:18px 24px 22px; }
+.leave-balance-details p,.leave-balance-details .alert { margin:0 0 12px; }
+.leave-balance-details small { display:block; color:var(--muted); line-height:1.5; }
+[data-theme="dark"] .leave-balance-card { background:#172235; }
+@media (max-width:850px) { .leave-balance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:480px) { .leave-balance-grid { grid-template-columns:1fr; padding:16px 15px 0; } }

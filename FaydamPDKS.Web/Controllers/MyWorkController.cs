@@ -4,6 +4,7 @@ using System.Text;
 using FaydamPDKS.Core.DTOs;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Core.Enums;
+using FaydamPDKS.Core.Exceptions;
 using FaydamPDKS.Core.Models;
 using FaydamPDKS.Web.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,7 @@ public sealed class MyWorkController(
     IAttendanceCorrectionRepository corrections,
     IManagerNotificationService managerNotifications,
     IWorkLocationService workLocations,
+    IAnnualLeaveService annualLeave,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider) : Controller
 {
@@ -71,7 +73,8 @@ public sealed class MyWorkController(
         var leaves = await leaveRequests.GetForUserAsync(userId, cancellationToken);
         return View(new MyWorkViewModel(today, today, [], [], leaves)
         {
-            LeaveWorkDayCounts = await LeaveWorkDayCountsAsync(userId, leaves, cancellationToken)
+            LeaveWorkDayCounts = await LeaveWorkDayCountsAsync(userId, leaves, cancellationToken),
+            AnnualLeaveBalance = await annualLeave.GetBalanceAsync(userId, cancellationToken)
         });
     }
 
@@ -129,6 +132,18 @@ public sealed class MyWorkController(
         {
             TempData["Error"] = "Seçilen tarihlerde bekleyen veya onaylanmış başka bir izin talebiniz var.";
             return RedirectToAction(nameof(Leaves));
+        }
+        if (leaveType == LeaveType.Annual)
+        {
+            try
+            {
+                await annualLeave.EnsureCanRequestAsync(userId, startDate, endDate, dayPortion, cancellationToken);
+            }
+            catch (AnnualLeaveException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction(nameof(Leaves));
+            }
         }
         var leave = new LeaveRequest
         {

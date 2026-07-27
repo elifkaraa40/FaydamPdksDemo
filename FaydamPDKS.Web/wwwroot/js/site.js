@@ -17,6 +17,71 @@ document.addEventListener("click", function (event) {
 });
 
 document.addEventListener("DOMContentLoaded", function () {
+    const turkishMonths = [
+        "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+        "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+    ];
+
+    document.querySelectorAll("[data-date-parts]").forEach(function (container) {
+        const target = document.getElementById(container.dataset.target);
+        const day = container.querySelector("[data-date-day]");
+        const month = container.querySelector("[data-date-month]");
+        const year = container.querySelector("[data-date-year]");
+        if (!target || !day || !month || !year) return;
+
+        for (let value = 1; value <= 31; value++) {
+            day.add(new Option(value.toString().padStart(2, "0"), value.toString()));
+        }
+        turkishMonths.forEach(function (name, index) {
+            month.add(new Option(name, (index + 1).toString()));
+        });
+
+        const initial = /^(\d{4})-(\d{2})-(\d{2})$/.exec(target.value);
+        if (initial) {
+            year.value = initial[1];
+            month.value = Number(initial[2]).toString();
+            day.value = Number(initial[3]).toString();
+        }
+
+        function syncDate() {
+            day.setCustomValidity("");
+            year.setCustomValidity("");
+            year.value = year.value.replace(/\D/g, "").slice(0, 4);
+
+            if (!day.value || !month.value || year.value.length !== 4) {
+                target.value = "";
+                return;
+            }
+
+            const yearValue = Number(year.value);
+            const monthValue = Number(month.value);
+            const dayValue = Number(day.value);
+            const candidate = new Date(Date.UTC(yearValue, monthValue - 1, dayValue));
+            const valid = candidate.getUTCFullYear() === yearValue
+                && candidate.getUTCMonth() === monthValue - 1
+                && candidate.getUTCDate() === dayValue;
+            if (!valid || yearValue < 1900) {
+                target.value = "";
+                day.setCustomValidity("Geçerli bir tarih seçin.");
+                return;
+            }
+
+            const iso = `${year.value}-${month.value.padStart(2, "0")}-${day.value.padStart(2, "0")}`;
+            if (container.dataset.max && iso > container.dataset.max) {
+                target.value = "";
+                year.setCustomValidity(`${container.dataset.label || "Tarih"} bugünden ileri olamaz.`);
+                return;
+            }
+
+            target.value = iso;
+        }
+
+        day.addEventListener("change", syncDate);
+        month.addEventListener("change", syncDate);
+        year.addEventListener("input", syncDate);
+        syncDate();
+    });
+
     const personnelDetail = document.querySelector("[data-personnel-detail]");
     const personnelDetailTitle = personnelDetail?.querySelector("[data-personnel-detail-title]");
     const personnelGroups = Array.from(personnelDetail?.querySelectorAll("[data-personnel-group]") || []);

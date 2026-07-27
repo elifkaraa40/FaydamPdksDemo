@@ -1,6 +1,136 @@
 @model FaydamPDKS.Web.Models.MyWorkViewModel
-@{ ViewData["Title"] = "İzinlerim"; }
-@if(TempData["Success"] is string success){<div class="alert alert-success">@success</div>}@if(TempData["Error"] is string error){<div class="alert alert-danger">@error</div>}
-<section class="dashboard-heading"><div><p class="eyebrow">Talepler</p><h1>İzinlerim</h1><p>Yeni izin talebi oluşturun ve mevcut taleplerinizin durumunu takip edin.</p></div></section>
-<div class="content-grid"><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Geçmiş</p><h2>İzin taleplerim</h2></div></div><div class="table-responsive"><table class="table"><thead><tr><th>Tarih</th><th>Süre</th><th>Tür</th><th>Açıklama</th><th>Durum</th><th></th></tr></thead><tbody>@foreach(var item in Model.LeaveRequests){<tr><td>@item.StartDate.ToString("dd.MM.yyyy") – @item.EndDate.ToString("dd.MM.yyyy")<small>@(item.EndDate.DayNumber-item.StartDate.DayNumber+1) takvim günü</small></td><td><strong>@Model.LeaveWorkDayCounts.GetValueOrDefault(item.Id).ToString("0.#") iş günü</strong><small>@FaydamPDKS.Core.LeaveLabels.Portion(item.DayPortion)</small></td><td>@FaydamPDKS.Core.LeaveLabels.Type(item.LeaveType)</td><td>@(item.Reason ?? "—")</td><td>@FaydamPDKS.Core.LeaveLabels.Status(item.Status)</td><td>@if(item.Status == FaydamPDKS.Core.Enums.LeaveRequestStatus.Pending){<form asp-action="CancelLeave" method="post"><input type="hidden" name="id" value="@item.Id"/><button class="btn btn-sm btn-outline-danger" type="submit">İptal</button></form>}</td></tr>}</tbody></table></div></section>
-<aside class="panel create-panel"><div class="panel-heading"><div><p class="eyebrow">Yeni talep</p><h2>İzin talep et</h2></div></div><form class="admin-form" asp-action="CreateLeave" method="post"><div class="form-field"><label for="leaveType">İzin türü</label><select id="leaveType" name="leaveType">@foreach(var type in Enum.GetValues<FaydamPDKS.Core.Enums.LeaveType>()){<option value="@type">@FaydamPDKS.Core.LeaveLabels.Type(type)</option>}</select></div><div class="form-field"><label for="dayPortion">İzin süresi</label><select id="dayPortion" name="dayPortion">@foreach(var portion in Enum.GetValues<FaydamPDKS.Core.Enums.LeaveDayPortion>()){<option value="@portion">@FaydamPDKS.Core.LeaveLabels.Portion(portion)</option>}</select><small>Yarım gün seçilirse başlangıç ve bitiş aynı tarih olmalıdır.</small></div><div class="form-row"><div class="form-field"><label for="startDate">Başlangıç</label><input id="startDate" name="startDate" type="date" min="@DateTime.Today.ToString("yyyy-MM-dd")" required/></div><div class="form-field"><label for="endDate">Bitiş</label><input id="endDate" name="endDate" type="date" min="@DateTime.Today.ToString("yyyy-MM-dd")" required/></div></div><div class="form-field"><label for="reason">Açıklama</label><textarea id="reason" name="reason" maxlength="500"></textarea></div><button class="btn btn-primary w-100" type="submit">Onaya gönder</button></form></aside></div>
+@using FaydamPDKS.Core.Enums
+@{
+    ViewData["Title"] = "İzinlerim";
+    var balance = Model.AnnualLeaveBalance;
+    var annualLeaveCanBeSelected = balance is { IsEligible: true, AvailableDays: > 0 };
+}
+
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success">@success</div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<section class="dashboard-heading">
+    <div>
+        <p class="eyebrow">Talepler</p>
+        <h1>İzinlerim</h1>
+        <p>Yeni izin talebi oluşturun ve mevcut taleplerinizin durumunu takip edin.</p>
+    </div>
+</section>
+
+@if (balance is not null)
+{
+    <section class="panel mb-4" aria-labelledby="annual-leave-balance-title">
+        <div class="panel-heading">
+            <div>
+                <p class="eyebrow">Yıllık izin</p>
+                <h2 id="annual-leave-balance-title">Yıllık izin bakiyem</h2>
+            </div>
+        </div>
+        <div class="leave-balance-grid">
+            <div class="leave-balance-card"><span>Toplam hak edilen</span><strong>@balance.TotalEntitledDays.ToString("0.#") gün</strong></div>
+            <div class="leave-balance-card"><span>Onaylanan</span><strong>@balance.ApprovedUsedDays.ToString("0.#") gün</strong></div>
+            <div class="leave-balance-card"><span>Onay bekleyen</span><strong>@balance.PendingDays.ToString("0.#") gün</strong></div>
+            <div class="leave-balance-card"><span>Kullanılabilir</span><strong>@balance.AvailableDays.ToString("0.#") gün</strong></div>
+        </div>
+        <div class="leave-balance-details">
+            <p>
+                İşe giriş: <strong>@(balance.HireDate?.ToString("dd.MM.yyyy") ?? "Eksik")</strong>
+                @if (balance.IsEligible)
+                {
+                    <span> · Sonraki hak ediş: <strong>@balance.NextEntitlementDate?.ToString("dd.MM.yyyy")</strong></span>
+                }
+                else if (balance.FirstEntitlementDate.HasValue)
+                {
+                    <span> · İlk hak ediş: <strong>@balance.FirstEntitlementDate.Value.ToString("dd.MM.yyyy")</strong></span>
+                }
+            </p>
+            @if (!string.IsNullOrWhiteSpace(balance.InformationMessage))
+            {
+                <div class="alert @(balance.IsEligible ? "alert-info" : "alert-warning")">@balance.InformationMessage</div>
+            }
+            <small>Resmî tatil ve hafta tatili günleri yıllık izin bakiyesinden düşülmez. Bekleyen talepler, sonuçlanana kadar kullanılabilir bakiyeden ayrılır.</small>
+        </div>
+    </section>
+}
+
+<div class="content-grid">
+    <section class="panel">
+        <div class="panel-heading">
+            <div><p class="eyebrow">Geçmiş</p><h2>İzin taleplerim</h2></div>
+        </div>
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Tarih</th><th>Süre</th><th>Tür</th><th>Açıklama</th><th>Durum</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var item in Model.LeaveRequests)
+                {
+                    <tr>
+                        <td>@item.StartDate.ToString("dd.MM.yyyy") – @item.EndDate.ToString("dd.MM.yyyy")<small>@(item.EndDate.DayNumber - item.StartDate.DayNumber + 1) takvim günü</small></td>
+                        <td><strong>@Model.LeaveWorkDayCounts.GetValueOrDefault(item.Id).ToString("0.#") iş günü</strong><small>@FaydamPDKS.Core.LeaveLabels.Portion(item.DayPortion)</small></td>
+                        <td>@FaydamPDKS.Core.LeaveLabels.Type(item.LeaveType)</td>
+                        <td>@(item.Reason ?? "—")</td>
+                        <td>@FaydamPDKS.Core.LeaveLabels.Status(item.Status)</td>
+                        <td>
+                            @if (item.Status == LeaveRequestStatus.Pending)
+                            {
+                                <form asp-action="CancelLeave" method="post">
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">İptal</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <aside class="panel create-panel">
+        <div class="panel-heading"><div><p class="eyebrow">Yeni talep</p><h2>İzin talep et</h2></div></div>
+        <form class="admin-form" asp-action="CreateLeave" method="post">
+            <div class="form-field">
+                <label for="leaveType">İzin türü</label>
+                <select id="leaveType" name="leaveType">
+                    @foreach (var type in Enum.GetValues<LeaveType>())
+                    {
+                        if (type == LeaveType.Annual && !annualLeaveCanBeSelected)
+                        {
+                            <option value="@type" disabled>@FaydamPDKS.Core.LeaveLabels.Type(type) — kullanılamıyor</option>
+                        }
+                        else
+                        {
+                            <option value="@type">@FaydamPDKS.Core.LeaveLabels.Type(type)</option>
+                        }
+                    }
+                </select>
+                @if (!annualLeaveCanBeSelected)
+                {
+                    <small>Yıllık izin seçeneği, hak oluştuğunda ve kullanılabilir bakiye bulunduğunda açılır.</small>
+                }
+            </div>
+            <div class="form-field">
+                <label for="dayPortion">İzin süresi</label>
+                <select id="dayPortion" name="dayPortion">
+                    @foreach (var portion in Enum.GetValues<LeaveDayPortion>())
+                    {
+                        <option value="@portion">@FaydamPDKS.Core.LeaveLabels.Portion(portion)</option>
+                    }
+                </select>
+                <small>Yarım gün seçilirse başlangıç ve bitiş aynı tarih olmalıdır.</small>
+            </div>
+            <div class="form-row">
+                <div class="form-field"><label for="startDate">Başlangıç</label><input id="startDate" name="startDate" type="date" min="@Model.From.ToString("yyyy-MM-dd")" required /></div>
+                <div class="form-field"><label for="endDate">Bitiş</label><input id="endDate" name="endDate" type="date" min="@Model.From.ToString("yyyy-MM-dd")" required /></div>
+            </div>
+            <div class="form-field"><label for="reason">Açıklama</label><textarea id="reason" name="reason" maxlength="500"></textarea></div>
+            <button class="btn btn-primary w-100" type="submit">Onaya gönder</button>
+        </form>
+    </aside>
+</div>

@@ -14,7 +14,8 @@ public sealed record MobileProfileDto(
     string? EmployeeNumber,
     string? DepartmentName,
     string? WorkplaceName,
-    DateOnly? HireDate);
+    DateOnly? HireDate,
+    DateOnly? BirthDate);
 
 public sealed record UpdateMobileProfileDto(
     [StringLength(30)] string? PhoneNumber,

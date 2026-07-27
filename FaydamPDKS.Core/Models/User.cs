@@ -38,6 +38,9 @@ namespace FaydamPDKS.Core.Models
         [Column("hire_date")]
         public DateOnly? HireDate { get; set; }
 
+        [Column("birth_date")]
+        public DateOnly? BirthDate { get; set; }
+
         [Column("is_active")]
         public bool IsActive { get; set; } = true;
 

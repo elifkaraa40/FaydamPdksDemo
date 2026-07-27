@@ -20,7 +20,8 @@ public sealed class ManagerMobileServiceTests
         var manager = new User { Id = Guid.NewGuid(), Name = "Yönetici", Email = "manager@test.local", EmployeeNumber = "YON-1",
             RoleId = managerRole.Id, Role = managerRole, AccountStatus = AccountStatus.Active, IsActive = true };
         var personnel = new User { Id = Guid.NewGuid(), Name = "Yeni Personel", Email = "personnel@test.local", EmployeeNumber = string.Empty,
-            RoleId = personnelRole.Id, Role = personnelRole, AccountStatus = AccountStatus.PendingApproval, IsActive = true };
+            RoleId = personnelRole.Id, Role = personnelRole, AccountStatus = AccountStatus.PendingApproval, IsActive = true,
+            HireDate = new DateOnly(2020, 1, 1), BirthDate = new DateOnly(1990, 1, 1) };
         db.AddRange(managerRole, personnelRole, manager, personnel);
         await db.SaveChangesAsync();
 

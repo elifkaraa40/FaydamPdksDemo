@@ -53,6 +53,8 @@ namespace FaydamPDKS.Data
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Yonetici123!"),
                     RoleId = yoneticiRole.Id,
                     PhoneNumber = "0555 000 0001",
+                    HireDate = new DateOnly(2020, 1, 1),
+                    BirthDate = new DateOnly(1985, 1, 1),
                     IsEmailNotificationEnabled = true,
                     IsSmsNotificationEnabled = false
                 };
@@ -69,6 +71,8 @@ namespace FaydamPDKS.Data
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Personel123!"),
                     RoleId = personelRole.Id,
                     PhoneNumber = "0555 000 0002",
+                    HireDate = new DateOnly(2020, 1, 1),
+                    BirthDate = new DateOnly(1995, 1, 1),
                     IsEmailNotificationEnabled = true,
                     IsSmsNotificationEnabled = false
                 };
@@ -76,6 +80,20 @@ namespace FaydamPDKS.Data
                 context.Users.AddRange(yoneticiUser, personelUser);
                 await context.SaveChangesAsync();
             }
+
+            var demoManager = await context.Users.FirstOrDefaultAsync(x => x.Email == "yonetici@faydam.com");
+            if (demoManager is not null)
+            {
+                demoManager.HireDate ??= new DateOnly(2020, 1, 1);
+                demoManager.BirthDate ??= new DateOnly(1985, 1, 1);
+            }
+            var demoPersonnel = await context.Users.FirstOrDefaultAsync(x => x.Email == "personel@faydam.com");
+            if (demoPersonnel is not null)
+            {
+                demoPersonnel.HireDate ??= new DateOnly(2020, 1, 1);
+                demoPersonnel.BirthDate ??= new DateOnly(1995, 1, 1);
+            }
+            await context.SaveChangesAsync();
 
             var workplace = await context.Workplaces.FirstOrDefaultAsync(x => x.Code == "MERKEZ");
             if (workplace is null)

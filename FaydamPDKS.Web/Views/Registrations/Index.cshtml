@@ -16,16 +16,18 @@
     }
     else
     {
-        <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Ad soyad</th><th>E-posta</th><th>Personel no</th><th>Departman</th><th>İşlem</th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Çalışan</th><th>Çalışma bilgileri</th><th>Onay bilgileri</th><th>İşlem</th></tr></thead><tbody>
         @foreach (var user in Model.Users)
         {
             <tr>
-                <td><strong>@user.Name</strong></td><td>@user.Email</td>
-                <td colspan="3"><div class="d-flex flex-wrap gap-2"><form class="d-flex flex-wrap gap-2 flex-grow-1" asp-action="Approve" method="post">
+                <td><strong>@user.Name</strong><small class="d-block">@user.Email</small></td>
+                <td><span>İşe giriş: @(user.HireDate?.ToString("dd.MM.yyyy") ?? "Eksik")</span><small class="d-block">Doğum: @(user.BirthDate?.ToString("dd.MM.yyyy") ?? "Eksik")</small></td>
+                <td><div class="d-flex flex-wrap gap-2"><form class="d-flex flex-wrap gap-2 flex-grow-1" asp-action="Approve" method="post">
                     <input type="hidden" name="id" value="@user.Id" /><input class="form-control" style="max-width:12rem" name="employeeNumber" value="@Model.SuggestedEmployeeNumber" aria-label="Personel numarası" required maxlength="40" />
                     <select class="form-select" style="max-width:16rem" name="departmentId"><option value="">Departman seçilmedi</option>@foreach (var department in Model.Departments) { <option value="@department.Id">@department.Name</option> }</select>
                     <button class="btn btn-primary" type="submit">Onayla</button>
-                </form><form asp-action="Reject" method="post" onsubmit="return confirm('Bu kaydı reddetmek istiyor musunuz?');"><input type="hidden" name="id" value="@user.Id" /><button class="btn btn-outline-danger" type="submit">Reddet</button></form></div></td>
+                </form></div></td>
+                <td><form asp-action="Reject" method="post" onsubmit="return confirm('Bu kaydı reddetmek istiyor musunuz?');"><input type="hidden" name="id" value="@user.Id" /><button class="btn btn-outline-danger" type="submit">Reddet</button></form></td>
             </tr>
         }
         </tbody></table></div>

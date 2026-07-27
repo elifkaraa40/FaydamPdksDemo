@@ -30,6 +30,11 @@ public sealed class RegistrationsController(AppDbContext context, IAuditTrail au
     {
         var user = await context.Users.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (user is null) return NotFound();
+        if (!user.HireDate.HasValue || !user.BirthDate.HasValue)
+        {
+            TempData["Error"] = $"{user.Name} için işe giriş ve doğum tarihi eksik. Kaydı onaylamadan önce Personel Yönetimi ekranından bu bilgileri tamamlayın.";
+            return RedirectToAction(nameof(Index));
+        }
         await EmployeeNumberLock.WaitAsync(cancellationToken);
         try
         {
@@ -54,7 +59,7 @@ public sealed class RegistrationsController(AppDbContext context, IAuditTrail au
             user.AccountStatus = AccountStatus.Active;
             user.IsActive = true;
             context.Notifications.Add(NewNotification(user.Id, NotificationType.RegistrationApproved, "Hesabınız onaylandı", $"PDKS hesabınız {employeeNumber} sicil numarasıyla kullanıma açıldı."));
-            await auditTrail.RecordAsync(GetActorId(), "Registration.Approved", nameof(User), user.Id.ToString(), new { Status = oldStatus }, new { user.AccountStatus, user.EmployeeNumber, user.DepartmentId }, HttpContext.TraceIdentifier, cancellationToken);
+            await auditTrail.RecordAsync(GetActorId(), "Registration.Approved", nameof(User), user.Id.ToString(), new { Status = oldStatus }, new { user.AccountStatus, user.EmployeeNumber, user.DepartmentId, user.HireDate, user.BirthDate }, HttpContext.TraceIdentifier, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
         }
         finally

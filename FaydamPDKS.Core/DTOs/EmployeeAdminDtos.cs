@@ -11,6 +11,7 @@ public sealed record EmployeeListItemDto(
     string? Workplace,
     string? Department,
     DateOnly? HireDate,
+    DateOnly? BirthDate,
     string Role,
     bool IsActive);
 
@@ -30,7 +31,11 @@ public sealed class CreateEmployeeDto
 
     public Guid? DepartmentId { get; set; }
 
+    [Required(ErrorMessage = "İşe giriş tarihi zorunludur.")]
     public DateOnly? HireDate { get; set; }
+
+    [Required(ErrorMessage = "Doğum tarihi, yaşa bağlı yıllık izin hakkının hesaplanması için zorunludur.")]
+    public DateOnly? BirthDate { get; set; }
 
     [Required]
     public Guid RoleId { get; set; }
@@ -59,7 +64,11 @@ public sealed class UpdateEmployeeDto
 
     public Guid? DepartmentId { get; set; }
 
+    [Required(ErrorMessage = "İşe giriş tarihi zorunludur.")]
     public DateOnly? HireDate { get; set; }
+
+    [Required(ErrorMessage = "Doğum tarihi, yaşa bağlı yıllık izin hakkının hesaplanması için zorunludur.")]
+    public DateOnly? BirthDate { get; set; }
 
     [Required]
     public Guid RoleId { get; set; }

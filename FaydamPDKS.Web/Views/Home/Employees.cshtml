@@ -29,7 +29,7 @@
                     {
                         <tr>
                             <td><strong>@item.FullName</strong><small>@item.EmployeeNumber · @item.Email</small></td>
-                            <td>@(item.Department ?? "—")<small>@(item.Workplace ?? "İşyeri belirtilmemiş") · @(item.HireDate?.ToString("dd.MM.yyyy") ?? "İşe giriş yok")</small></td>
+                            <td>@(item.Department ?? "—")<small>@(item.Workplace ?? "İşyeri belirtilmemiş") · İşe giriş: @(item.HireDate?.ToString("dd.MM.yyyy") ?? "eksik")</small><small>Doğum: @(item.BirthDate?.ToString("dd.MM.yyyy") ?? "eksik")</small></td>
                             <td>@item.Role</td>
                             <td><span class="status @(item.IsActive ? "success" : "neutral")">@(item.IsActive ? "Aktif" : "Pasif")</span></td>
                             <td class="text-end"><div class="review-actions">
@@ -54,7 +54,28 @@
             <div class="form-field"><label for="Email">Kurumsal e-posta</label><input id="Email" name="Email" value="@createRequest.Email" type="email" required maxlength="100" autocomplete="email" />@Html.ValidationMessage("Email")</div>
             <div class="form-field"><label for="PhoneNumber">Telefon numarası</label><input id="PhoneNumber" name="PhoneNumber" value="@createRequest.PhoneNumber" type="tel" maxlength="20" autocomplete="tel" placeholder="05xx xxx xx xx" />@Html.ValidationMessage("PhoneNumber")<small>Mobil giriş için kullanılır.</small></div>
             <div class="form-field"><label for="DepartmentId">İşyeri / bölüm</label><select id="DepartmentId" name="DepartmentId"><option value="">Bölüm seçilmedi</option>@foreach (var department in Model.Departments) { <option value="@department.Id" selected="@(createRequest.DepartmentId == department.Id ? "selected" : null)">@department.WorkplaceName · @department.DepartmentName</option> }</select></div>
-            <div class="form-field"><label for="HireDate">İşe giriş tarihi</label><input id="HireDate" name="HireDate" value="@createRequest.HireDate?.ToString("yyyy-MM-dd")" type="date" /></div>
+            <div class="form-field">
+                <label id="HireDateLabel">İşe giriş tarihi</label>
+                <input id="HireDate" name="HireDate" value="@createRequest.HireDate?.ToString("yyyy-MM-dd")" type="hidden" />
+                <div class="date-part-input" data-date-parts data-target="HireDate" data-label="İşe giriş tarihi" data-max="@DateTime.Today.ToString("yyyy-MM-dd")" aria-labelledby="HireDateLabel">
+                    <select data-date-day required aria-label="İşe giriş günü"><option value="">Gün</option></select>
+                    <select data-date-month required aria-label="İşe giriş ayı"><option value="">Ay</option></select>
+                    <input data-date-year type="text" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" placeholder="Yıl" aria-label="İşe giriş yılı" required />
+                </div>
+                @Html.ValidationMessage("HireDate")
+                <small>Gün ve ayı seçin, yılı doğrudan yazın. Yıllık izin hakedişi bu tarihten itibaren hesaplanır.</small>
+            </div>
+            <div class="form-field">
+                <label id="BirthDateLabel">Doğum tarihi</label>
+                <input id="BirthDate" name="BirthDate" value="@createRequest.BirthDate?.ToString("yyyy-MM-dd")" type="hidden" />
+                <div class="date-part-input" data-date-parts data-target="BirthDate" data-label="Doğum tarihi" data-max="@DateTime.Today.ToString("yyyy-MM-dd")" aria-labelledby="BirthDateLabel">
+                    <select data-date-day required aria-label="Doğum günü"><option value="">Gün</option></select>
+                    <select data-date-month required aria-label="Doğum ayı"><option value="">Ay</option></select>
+                    <input data-date-year type="text" inputmode="numeric" autocomplete="bday-year" maxlength="4" pattern="[0-9]{4}" placeholder="Yıl" aria-label="Doğum yılı" required />
+                </div>
+                @Html.ValidationMessage("BirthDate")
+                <small>Gün ve ayı seçin, yılı doğrudan yazın. Yaşa bağlı yasal yıllık izin süresi için kullanılır.</small>
+            </div>
             <div class="form-field"><label for="RoleId">Rol</label><select id="RoleId" name="RoleId" required><option value="">Rol seçin</option>@foreach (var role in Model.Roles) { <option value="@role.Id" selected="@(createRequest.RoleId == role.Id ? "selected" : null)">@role.Name</option> }</select>@Html.ValidationMessage("RoleId")</div>
             <div class="form-field"><label for="TemporaryPassword">Geçici parola</label><div class="password-field"><input id="TemporaryPassword" name="TemporaryPassword" type="password" required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="temporary-password-help temporary-password-error" /><button class="password-toggle" type="button" data-password-toggle aria-label="Parolayı göster" aria-pressed="false"><svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg><svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 6.1A10.8 10.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-2.1 2.8M6.5 6.6C3.9 8.3 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg></button></div><span id="temporary-password-error">@Html.ValidationMessage("TemporaryPassword")</span><small id="temporary-password-help">En az 8 karakter. Güvenli kanaldan personele iletin.</small></div>
             <button class="btn btn-primary w-100" type="submit">Personel oluştur</button>

@@ -14,7 +14,28 @@
         <div class="form-field"><label asp-for="Email">Kurumsal e-posta</label><input asp-for="Email" /><span asp-validation-for="Email"></span></div>
         <div class="form-field"><label asp-for="PhoneNumber">Telefon numarası</label><input asp-for="PhoneNumber" type="tel" autocomplete="tel" placeholder="05xx xxx xx xx" /><span asp-validation-for="PhoneNumber"></span><small>Mobil uygulamada giriş için kullanılır.</small></div>
         <div class="form-field"><label asp-for="DepartmentId">İşyeri / bölüm</label><select asp-for="DepartmentId"><option value="">Bölüm seçilmedi</option>@foreach (var department in departments) { <option value="@department.Id">@department.WorkplaceName · @department.DepartmentName</option> }</select></div>
-        <div class="form-field"><label asp-for="HireDate">İşe giriş tarihi</label><input asp-for="HireDate" type="date" /></div>
+        <div class="form-field">
+            <label id="HireDateLabel">İşe giriş tarihi</label>
+            <input asp-for="HireDate" type="hidden" />
+            <div class="date-part-input" data-date-parts data-target="HireDate" data-label="İşe giriş tarihi" data-max="@DateTime.Today.ToString("yyyy-MM-dd")" aria-labelledby="HireDateLabel">
+                <select data-date-day required aria-label="İşe giriş günü"><option value="">Gün</option></select>
+                <select data-date-month required aria-label="İşe giriş ayı"><option value="">Ay</option></select>
+                <input data-date-year type="text" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" placeholder="Yıl" aria-label="İşe giriş yılı" required />
+            </div>
+            <span asp-validation-for="HireDate"></span>
+            <small>Gün ve ayı seçin, yılı doğrudan yazın. Yıllık izin hakedişi bu tarihten itibaren hesaplanır.</small>
+        </div>
+        <div class="form-field">
+            <label id="BirthDateLabel">Doğum tarihi</label>
+            <input asp-for="BirthDate" type="hidden" />
+            <div class="date-part-input" data-date-parts data-target="BirthDate" data-label="Doğum tarihi" data-max="@DateTime.Today.ToString("yyyy-MM-dd")" aria-labelledby="BirthDateLabel">
+                <select data-date-day required aria-label="Doğum günü"><option value="">Gün</option></select>
+                <select data-date-month required aria-label="Doğum ayı"><option value="">Ay</option></select>
+                <input data-date-year type="text" inputmode="numeric" autocomplete="bday-year" maxlength="4" pattern="[0-9]{4}" placeholder="Yıl" aria-label="Doğum yılı" required />
+            </div>
+            <span asp-validation-for="BirthDate"></span>
+            <small>Gün ve ayı seçin, yılı doğrudan yazın. Yaşa bağlı yasal yıllık izin süresi için kullanılır.</small>
+        </div>
         <div class="form-field"><label asp-for="RoleId">Rol</label><select asp-for="RoleId">@foreach (var role in roles) { <option value="@role.Id">@role.Name</option> }</select></div>
         <div class="form-actions"><a class="btn btn-light" asp-action="Index">Vazgeç</a><button class="btn btn-primary" type="submit">Değişiklikleri kaydet</button></div>
     </form>

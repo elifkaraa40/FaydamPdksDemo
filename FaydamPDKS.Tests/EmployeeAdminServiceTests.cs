@@ -20,6 +20,7 @@ public sealed class EmployeeAdminServiceTests
         await service.CreateAsync(new CreateEmployeeDto
         {
             EmployeeNumber = " per-0042 ", FullName = "  Elif Test  ", Email = " ELIF@FAYDAM.COM ",
+            HireDate = new DateOnly(2020, 1, 1), BirthDate = new DateOnly(1990, 1, 1),
             RoleId = role.Id, TemporaryPassword = "StrongPassword123!"
         }, Guid.NewGuid());
 
@@ -34,6 +35,7 @@ public sealed class EmployeeAdminServiceTests
         var duplicate = new CreateEmployeeDto
         {
             EmployeeNumber = "PER-0043", FullName = "Baska Personel", Email = "elif@faydam.com",
+            HireDate = new DateOnly(2020, 1, 1), BirthDate = new DateOnly(1990, 1, 1),
             RoleId = role.Id, TemporaryPassword = "StrongPassword123!"
         };
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(duplicate, Guid.NewGuid()));

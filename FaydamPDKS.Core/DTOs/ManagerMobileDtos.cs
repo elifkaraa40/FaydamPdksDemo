@@ -16,7 +16,7 @@ public sealed record ManagerDashboardDto(
 
 public sealed record ManagerRegistrationDto(
     Guid Id, string FullName, string Email, string? PhoneNumber, AccountStatus Status,
-    string? EmployeeNumber, Guid? DepartmentId);
+    string? EmployeeNumber, Guid? DepartmentId, DateOnly? HireDate, DateOnly? BirthDate);
 
 public sealed class ReviewRegistrationDto
 {

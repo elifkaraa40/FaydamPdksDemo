@@ -17,7 +17,7 @@ public sealed class PersonalDataExportService(AppDbContext context, TimeProvider
         var corrections = await context.AttendanceCorrectionRequests.AsNoTracking().Where(x => x.UserId == userId).OrderBy(x => x.CreatedAt).ToListAsync(cancellationToken);
         var notifications = await context.Notifications.AsNoTracking().Where(x => x.UserId == userId).OrderBy(x => x.CreatedAt).ToListAsync(cancellationToken);
         return new PersonalDataExportDto(timeProvider.GetUtcNow(),
-            new(user.Id, user.EmployeeNumber, user.Name, user.Email, user.PhoneNumber, user.Workplace?.Name, user.Department?.Name ?? user.DepartmentLegacy, user.HireDate, user.IsActive, user.IsEmailNotificationEnabled, user.IsSmsNotificationEnabled),
+            new(user.Id, user.EmployeeNumber, user.Name, user.Email, user.PhoneNumber, user.Workplace?.Name, user.Department?.Name ?? user.DepartmentLegacy, user.HireDate, user.BirthDate, user.IsActive, user.IsEmailNotificationEnabled, user.IsSmsNotificationEnabled),
             events,
             leaves.Select(x => new PersonalLeaveDto(x.Id, x.LeaveType.ToString(), x.StartDate, x.EndDate, x.Reason, x.Status.ToString(), x.CreatedAt, x.ReviewedAt, x.ReviewNote)).ToArray(),
             corrections.Select(x => new PersonalCorrectionDto(x.Id, x.WorkDate, x.RequestedEntry, x.RequestedExit, x.Reason, x.Status.ToString(), x.CreatedAt, x.ReviewedAt, x.ReviewNote)).ToArray(),
