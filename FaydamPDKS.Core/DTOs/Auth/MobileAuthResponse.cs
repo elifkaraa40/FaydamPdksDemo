@@ -16,4 +16,5 @@ public sealed record MobileUserDto(
     string Role,
     string? ProfileImageUrl,
     string AccountStatus = "Active",
-    string? PhoneNumber = null);
+    string? PhoneNumber = null,
+    bool MustChangePassword = false);

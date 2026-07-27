@@ -59,6 +59,7 @@ public sealed class HomeController(
 
         var user = await users.GetByIdWithRoleAsync(userId, asTracking: false, cancellationToken);
         if (user is null) return NotFound();
+        if (user.MustChangePassword) section = "security";
 
         var userNotifications = await notifications.GetForUserAsync(userId, 50, cancellationToken);
         var allowedSections = new[] { "personal", "appearance", "security", "notifications", "privacy" };
@@ -170,8 +171,18 @@ public sealed class HomeController(
             return RedirectToAction(nameof(Account), new { section = "security" });
         }
 
+        if (BCrypt.Net.BCrypt.Verify(model.NewPassword, user.PasswordHash))
+        {
+            TempData["Error"] = "Yeni parola mevcut parolayla aynı olamaz.";
+            return RedirectToAction(nameof(Account), new { section = "security" });
+        }
+
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+        user.MustChangePassword = false;
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        var currentSessionId = TrySessionId(out var sessionId) ? sessionId : (Guid?)null;
+        await deviceSessions.RevokeAllExceptAsync(userId, currentSessionId, "PASSWORD_CHANGED", cancellationToken);
+        await SignInUserAsync(user, isPersistent: true, currentSessionId);
         TempData["Success"] = "Parolanız güvenli biçimde değiştirildi.";
         return RedirectToAction(nameof(Account), new { section = "security" });
     }
@@ -258,6 +269,11 @@ public sealed class HomeController(
             cancellationToken);
         await SignInUserAsync(user, model.RememberMe, session.Id);
 
+        if (user.MustChangePassword)
+        {
+            TempData["Error"] = "Yöneticiniz tarafından verilen geçici parolayı değiştirmelisiniz.";
+            return RedirectToAction(nameof(Account), new { section = "security" });
+        }
         return IsLocal(model.ReturnUrl) ? LocalRedirect(model.ReturnUrl!) : RedirectToAction(nameof(Index));
     }
 
@@ -299,7 +315,8 @@ public sealed class HomeController(
             new Claim(ClaimTypes.Name, user.Name),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Role, user.Role?.Name ?? "Personel"),
-            new Claim("profile_image", user.ProfileImageUrl ?? string.Empty)
+            new Claim("profile_image", user.ProfileImageUrl ?? string.Empty),
+            new Claim("must_change_password", user.MustChangePassword ? "true" : "false")
         };
         if (sessionId.HasValue) claims.Add(new Claim("sid", sessionId.Value.ToString()));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));

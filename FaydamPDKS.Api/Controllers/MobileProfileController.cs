@@ -24,12 +24,13 @@ public sealed class MobileProfileController(
     {
         if (!TryGetUserId(out var userId)) return UnauthorizedError();
         var user = await context.Users.AsNoTracking().Where(x => x.Id == userId)
-            .Select(x => new { x.AccountStatus, x.IsActive }).SingleOrDefaultAsync(cancellationToken);
+            .Select(x => new { x.AccountStatus, x.IsActive, x.MustChangePassword }).SingleOrDefaultAsync(cancellationToken);
         if (user is null) return NotFound();
         return Ok(new
         {
             accountStatus = user.AccountStatus.ToString(),
             canUseApplication = user.IsActive && user.AccountStatus == FaydamPDKS.Core.Enums.AccountStatus.Active,
+            mustChangePassword = user.MustChangePassword,
             message = user.AccountStatus switch
             {
                 FaydamPDKS.Core.Enums.AccountStatus.PendingApproval => "Kaydınız yönetici onayı bekliyor.",

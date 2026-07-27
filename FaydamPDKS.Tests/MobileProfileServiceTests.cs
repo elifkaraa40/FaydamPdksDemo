@@ -22,6 +22,7 @@ public sealed class MobileProfileServiceTests
             Email = "profile@faydam.com",
             EmployeeNumber = "PER-700",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Current123!"),
+            MustChangePassword = true,
             RoleId = role.Id,
             Role = role,
             WorkplaceId = workplace.Id,
@@ -74,6 +75,7 @@ public sealed class MobileProfileServiceTests
         Assert.NotNull(stored);
         Assert.True(BCrypt.Net.BCrypt.Verify("NewPassword456!", stored.PasswordHash));
         Assert.False(BCrypt.Net.BCrypt.Verify("Current123!", stored.PasswordHash));
+        Assert.False(stored.MustChangePassword);
     }
 
     [Theory]

@@ -100,6 +100,27 @@ public sealed class WebDeviceSessionService(
         await context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RevokeAllExceptAsync(
+        Guid userId,
+        Guid? sessionIdToKeep,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
+        var now = timeProvider.GetUtcNow();
+        var sessions = await context.DeviceSessions
+            .Where(x => x.UserId == userId && x.RevokedAt == null
+                && (!sessionIdToKeep.HasValue || x.Id != sessionIdToKeep.Value))
+            .ToListAsync(cancellationToken);
+        foreach (var session in sessions) { session.RevokedAt = now; session.RevokeReason = reason; }
+
+        var refreshTokens = await context.RefreshTokens
+            .Where(x => x.UserId == userId && x.RevokedAt == null
+                && (!sessionIdToKeep.HasValue || x.DeviceSessionId != sessionIdToKeep.Value))
+            .ToListAsync(cancellationToken);
+        foreach (var token in refreshTokens) token.RevokedAt = now;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
     private static bool IsManager(User user)
     {
         var role = user.Role?.NormalizedName ?? user.Role?.Name ?? string.Empty;

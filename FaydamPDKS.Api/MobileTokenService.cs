@@ -226,6 +226,7 @@ public sealed class MobileTokenService(
             new Claim(ClaimTypes.Name, user.Name),
             new Claim(ClaimTypes.Role, user.Role?.Name ?? "Personel"),
             new Claim("account_status", user.AccountStatus.ToString()),
+            new Claim("must_change_password", user.MustChangePassword ? "true" : "false"),
             new Claim("sid", session.Id.ToString()),
             new Claim("device_hash", session.DeviceIdHash),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
@@ -261,7 +262,8 @@ public sealed class MobileTokenService(
                 user.Role?.Name ?? "Personel",
                 user.ProfileImageUrl,
                 user.AccountStatus.ToString(),
-                user.PhoneNumber),
+                user.PhoneNumber,
+                user.MustChangePassword),
             session.Id);
         return (response, refreshTokenEntity);
     }

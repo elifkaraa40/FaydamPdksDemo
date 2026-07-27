@@ -1,0 +1,19 @@
+@model FaydamPDKS.Web.Models.ResetPasswordModel
+@{ Layout = null; ViewData["Title"] = "Yeni şifre belirle"; }
+<!doctype html>
+<html lang="tr"><head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex, nofollow" />
+    <title>Yeni şifre belirle | Faydam PDKS</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" /><link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head><body class="login-page">
+<main class="recovery-shell narrow"><section class="recovery-card">
+    <p class="eyebrow">Güvenli şifre yenileme</p><h1>Yeni şifrenizi belirleyin</h1>
+    <p class="login-subtitle">Bağlantı tek kullanımlıktır. İşlem tamamlandığında eski cihaz oturumları kapatılır.</p>
+    <form asp-action="Reset" method="post">
+        <input asp-for="Token" type="hidden" /><div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <div class="form-field"><label asp-for="NewPassword">Yeni şifre</label><input asp-for="NewPassword" autocomplete="new-password" /><span asp-validation-for="NewPassword"></span></div>
+        <div class="form-field"><label asp-for="ConfirmPassword">Yeni şifre tekrar</label><input asp-for="ConfirmPassword" autocomplete="new-password" /><span asp-validation-for="ConfirmPassword"></span></div>
+        <button class="btn btn-primary login-button" type="submit">Şifreyi yenile</button>
+    </form>
+</section></main>
+</body></html>

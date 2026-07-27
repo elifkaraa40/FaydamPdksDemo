@@ -35,6 +35,7 @@ namespace FaydamPDKS.Data
         public DbSet<WorkLocationAssignmentDay> WorkLocationAssignmentDays { get; set; }
         public DbSet<FieldWorkRequest> FieldWorkRequests { get; set; }
         public DbSet<FieldWorkRequestDay> FieldWorkRequestDays { get; set; }
+        public DbSet<PasswordResetRequest> PasswordResetRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -71,6 +72,20 @@ namespace FaydamPDKS.Data
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PasswordResetRequest>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PasswordResetRequest>()
+                .HasIndex(x => x.TokenHash)
+                .IsUnique()
+                .HasFilter("token_hash IS NOT NULL");
+
+            modelBuilder.Entity<PasswordResetRequest>()
+                .HasIndex(x => new { x.UserId, x.Channel, x.Status });
 
             modelBuilder.Entity<DeviceSession>()
                 .HasOne(x => x.User)

@@ -51,6 +51,7 @@
                         <span asp-validation-for="Password"></span>
                     </div>
                     <label class="remember"><input asp-for="RememberMe" /> <span>Oturumu açık tut</span></label>
+                    <a class="forgot-password-link" asp-controller="PasswordRecovery" asp-action="Index">Şifremi unuttum</a>
                     <button class="btn btn-primary login-button" type="submit">Giriş yap</button>
                 </form>
                 <p class="login-help">Hesabınıza erişemiyor musunuz? Sistem yöneticinizle iletişime geçin.</p>

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Xunit;
 
 namespace FaydamPDKS.Tests;
@@ -41,5 +42,27 @@ public sealed class HostSmokeTests
         Assert.Contains("VALIDATION_ERROR", body);
         Assert.Contains("traceId", body);
         Assert.Equal("no-store", invalid.Headers.CacheControl?.ToString());
+    }
+
+    [Fact]
+    public async Task Mobile_password_recovery_endpoints_are_available_without_a_session()
+    {
+        await using var baseFactory = new WebApplicationFactory<FaydamPdksApiMarker>();
+        await using var factory = baseFactory.WithWebHostBuilder(builder =>
+            builder.UseSetting("Jwt:Key", "test-only-key-with-at-least-32-characters"));
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            AllowAutoRedirect = false
+        });
+
+        var options = await client.GetAsync("/api/v1/auth/password-recovery/options");
+        Assert.Equal(HttpStatusCode.OK, options.StatusCode);
+        using var optionsJson = JsonDocument.Parse(await options.Content.ReadAsStringAsync());
+        Assert.True(optionsJson.RootElement.TryGetProperty("emailResetAvailable", out _));
+
+        var request = await client.PostAsJsonAsync("/api/v1/auth/password-recovery/manager-request",
+            new { email = $"missing-{Guid.NewGuid():N}@faydam.invalid" });
+        Assert.Equal(HttpStatusCode.Accepted, request.StatusCode);
     }
 }

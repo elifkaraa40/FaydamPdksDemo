@@ -60,6 +60,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<WebDeviceSessionService>();
+builder.Services.AddSingleton<IWebPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
 builder.Services.AddScoped<IWebLeaveApprovalService, WebLeaveApprovalService>();
 builder.Services.AddScoped<IEmployeeAdminService, WebEmployeeAdminService>();
 builder.Services.AddScoped<IShiftAdminService, WebShiftAdminService>();
@@ -76,6 +77,14 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = 5,
             Window = TimeSpan.FromMinutes(5),
+            QueueLimit = 0
+        }));
+    options.AddPolicy("password-reset", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 3,
+            Window = TimeSpan.FromMinutes(15),
             QueueLimit = 0
         }));
 });
@@ -103,6 +112,23 @@ app.UseMiddleware<UiTranslationMiddleware>();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true
+        && context.User.FindFirst("must_change_password")?.Value == "true")
+    {
+        var path = context.Request.Path;
+        var allowed = path.StartsWithSegments("/Home/Account")
+            || path.StartsWithSegments("/Home/ChangePassword")
+            || path.StartsWithSegments("/Home/Logout");
+        if (!allowed)
+        {
+            context.Response.Redirect("/Home/Account?section=security");
+            return;
+        }
+    }
+    await next();
+});
 app.UseAuthorization();
 app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
 app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" })).AllowAnonymous();

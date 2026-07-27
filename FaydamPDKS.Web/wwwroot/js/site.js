@@ -17,6 +17,62 @@ document.addEventListener("click", function (event) {
 });
 
 document.addEventListener("DOMContentLoaded", function () {
+    const personnelDetail = document.querySelector("[data-personnel-detail]");
+    const personnelDetailTitle = personnelDetail?.querySelector("[data-personnel-detail-title]");
+    const personnelGroups = Array.from(personnelDetail?.querySelectorAll("[data-personnel-group]") || []);
+    const personnelStatusControls = Array.from(document.querySelectorAll("[data-personnel-status]"));
+
+    function showPersonnelStatus(status) {
+        if (!personnelDetail || !personnelDetailTitle) return;
+        const selectedGroup = personnelGroups.find(group => group.dataset.personnelGroup === status);
+        if (!selectedGroup) return;
+        personnelGroups.forEach(group => { group.hidden = group !== selectedGroup; });
+        personnelStatusControls.forEach(control => control.classList.toggle("is-status-active", control.dataset.personnelStatus === status));
+        personnelDetailTitle.textContent = selectedGroup.dataset.personnelTitle;
+        personnelDetail.hidden = false;
+        personnelDetail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    personnelStatusControls.forEach(function (control) {
+        control.addEventListener("click", () => showPersonnelStatus(control.dataset.personnelStatus));
+    });
+    personnelDetail?.querySelector("[data-personnel-detail-close]")?.addEventListener("click", function () {
+        personnelDetail.hidden = true;
+        personnelStatusControls.forEach(control => control.classList.remove("is-status-active"));
+    });
+
+    document.querySelectorAll("[data-attendance-chart]").forEach(function (chart) {
+        const label = chart.querySelector("[data-ring-center-label]");
+        const count = chart.querySelector("[data-ring-center-count]");
+        const rate = chart.querySelector("[data-ring-center-rate]");
+        const reset = chart.querySelector("[data-ring-reset]");
+        const rings = Array.from(chart.querySelectorAll("[data-ring-label]"));
+
+        function showRing(ring) {
+            rings.forEach(item => item.classList.toggle("is-active", item === ring));
+            label.textContent = ring.dataset.ringLabel;
+            count.textContent = ring.dataset.ringCount;
+            rate.textContent = ring.dataset.ringRate;
+        }
+
+        function showTotal() {
+            rings.forEach(item => item.classList.remove("is-active"));
+            label.textContent = reset.dataset.defaultLabel;
+            count.textContent = reset.dataset.defaultCount;
+            rate.textContent = reset.dataset.defaultRate;
+        }
+
+        rings.forEach(function (ring) {
+            ring.addEventListener("click", () => showRing(ring));
+            ring.addEventListener("keydown", function (event) {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                showRing(ring);
+            });
+        });
+        reset.addEventListener("click", showTotal);
+    });
+
     document.querySelectorAll("[data-field-work-request-form]").forEach(function (form) {
         const startDate = form.querySelector("[name='StartDate']");
         const endDate = form.querySelector("[name='EndDate']");

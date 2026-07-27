@@ -42,6 +42,7 @@ public sealed class MobileProfileService(IUserRepository users, IUnitOfWork unit
             throw new InvalidOperationException("PASSWORD_REUSE_NOT_ALLOWED");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.MustChangePassword = false;
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }

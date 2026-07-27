@@ -18,5 +18,8 @@ public enum NotificationType
     WorkLocationAssigned = 14,
     FieldWorkRequestCreated = 15,
     FieldWorkRequestApproved = 16,
-    FieldWorkRequestRejected = 17
+    FieldWorkRequestRejected = 17,
+    PasswordResetRequested = 18,
+    PasswordResetApproved = 19,
+    PasswordResetRejected = 20
 }
