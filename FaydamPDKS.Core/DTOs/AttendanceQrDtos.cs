@@ -26,7 +26,8 @@ public sealed class CreateAttendanceQrDto
 public sealed record GeneratedAttendanceQrDto(Guid Id, string Name, string RawValue, AttendanceEventType EventType);
 
 public sealed record ScanAttendanceQrRequest([Required] string QrValue, DateTimeOffset OccurredAt,
-    [Required, MaxLength(100)] string DeviceEventId);
+    [Required, MaxLength(100)] string DeviceEventId,
+    [Required, StringLength(200, MinimumLength = 16)] string DeviceId);
 
 public sealed record ScanAttendanceQrResponse(string EventType, string WorkplaceName, string ZoneName,
     DateTimeOffset OccurredAt);

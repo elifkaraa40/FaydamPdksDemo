@@ -23,10 +23,13 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MobileTokenService>();
 builder.Services.AddScoped<IMobileAuthService>(services => services.GetRequiredService<MobileTokenService>());
 builder.Services.AddScoped<EmailRegistrationService>();
+builder.Services.AddSingleton<MobilePasswordResetEmailSender>();
 builder.Services.AddScoped<IAttendanceService, MobileAttendanceService>();
 builder.Services.AddScoped<ILeaveRequestService, MobileLeaveRequestService>();
 builder.Services.AddScoped<IMobileProfileService, MobileProfileService>();
 builder.Services.AddScoped<IMobileNotificationService, MobileNotificationService>();
+builder.Services.AddSingleton<IFirebasePushSender, FirebasePushSender>();
+builder.Services.AddHostedService<PushNotificationWorker>();
 builder.Services.AddScoped<IAttendanceCorrectionService, MobileAttendanceCorrectionService>();
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -153,6 +156,27 @@ app.Use(async (context, next) =>
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         await context.Response.WriteAsJsonAsync(new ApiErrorDto("ACCOUNT_PENDING", "Hesabınız yönetici onayı bekliyor.", TraceId: context.TraceIdentifier));
         return;
+    }
+    await next();
+});
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true
+        && context.User.FindFirst("must_change_password")?.Value == "true")
+    {
+        var path = context.Request.Path;
+        var allowed = path.StartsWithSegments("/api/v1/me/change-password")
+            || path.StartsWithSegments("/api/v1/me/status")
+            || path.StartsWithSegments("/api/v1/auth/logout");
+        if (!allowed)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new ApiErrorDto(
+                "PASSWORD_CHANGE_REQUIRED",
+                "Devam etmek için geçici şifrenizi değiştirin.",
+                TraceId: context.TraceIdentifier));
+            return;
+        }
     }
     await next();
 });

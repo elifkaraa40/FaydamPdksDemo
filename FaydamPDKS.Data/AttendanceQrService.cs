@@ -9,7 +9,11 @@ using System.Text;
 
 namespace FaydamPDKS.Data;
 
-public sealed class AttendanceQrService(AppDbContext context, TimeProvider timeProvider, IManagerNotificationService? managerNotifications = null) : IAttendanceQrService
+public sealed class AttendanceQrService(
+    AppDbContext context,
+    TimeProvider timeProvider,
+    IManagerNotificationService? managerNotifications = null,
+    IAuditTrail? auditTrail = null) : IAttendanceQrService
 {
     public async Task<AttendanceQrPageDto> GetPageAsync(CancellationToken cancellationToken = default)
     {
@@ -111,6 +115,29 @@ public sealed class AttendanceQrService(AppDbContext context, TimeProvider timeP
             DeviceEventId = deviceEventId,
             Source = "MobileQr"
         });
+
+        var roleName = await context.Users.AsNoTracking()
+            .Where(x => x.Id == employeeId)
+            .Select(x => x.Role!.Name)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (auditTrail is not null && IsManagerRole(roleName))
+        {
+            await auditTrail.RecordAsync(
+                employeeId,
+                "MOBILE_QR_SCAN",
+                nameof(AttendanceQrCode),
+                qr.Id.ToString(),
+                null,
+                new
+                {
+                    EventType = qr.EventType.ToString(),
+                    qr.WorkplaceId,
+                    qr.ZoneId,
+                    DeviceEventId = deviceEventId
+                },
+                deviceEventId,
+                cancellationToken);
+        }
         await context.SaveChangesAsync(cancellationToken);
         return new(qr.EventType.ToString(), qr.Workplace.Name, qr.Zone.Name, now);
     }
@@ -154,4 +181,9 @@ public sealed class AttendanceQrService(AppDbContext context, TimeProvider timeP
         try { return TimeZoneInfo.FindSystemTimeZoneById(requested); }
         catch (TimeZoneNotFoundException) { return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"); }
     }
+
+    private static bool IsManagerRole(string? roleName) =>
+        string.Equals(roleName, "Yonetici", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(roleName, "Yönetici", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase);
 }

@@ -16,6 +16,7 @@ public sealed class HomeController(
     INotificationRepository notifications,
     IUnitOfWork unitOfWork,
     IPersonalDataExportService personalDataExport,
+    WebDeviceSessionService deviceSessions,
     IWebHostEnvironment environment,
     IDashboardQueryService dashboard,
     ILogger<HomeController> logger) : Controller
@@ -58,6 +59,7 @@ public sealed class HomeController(
 
         var user = await users.GetByIdWithRoleAsync(userId, asTracking: false, cancellationToken);
         if (user is null) return NotFound();
+        if (user.MustChangePassword) section = "security";
 
         var userNotifications = await notifications.GetForUserAsync(userId, 50, cancellationToken);
         var allowedSections = new[] { "personal", "appearance", "security", "notifications", "privacy" };
@@ -169,8 +171,18 @@ public sealed class HomeController(
             return RedirectToAction(nameof(Account), new { section = "security" });
         }
 
+        if (BCrypt.Net.BCrypt.Verify(model.NewPassword, user.PasswordHash))
+        {
+            TempData["Error"] = "Yeni parola mevcut parolayla aynı olamaz.";
+            return RedirectToAction(nameof(Account), new { section = "security" });
+        }
+
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+        user.MustChangePassword = false;
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        var currentSessionId = TrySessionId(out var sessionId) ? sessionId : (Guid?)null;
+        await deviceSessions.RevokeAllExceptAsync(userId, currentSessionId, "PASSWORD_CHANGED", cancellationToken);
+        await SignInUserAsync(user, isPersistent: true, currentSessionId);
         TempData["Success"] = "Parolanız güvenli biçimde değiştirildi.";
         return RedirectToAction(nameof(Account), new { section = "security" });
     }
@@ -249,15 +261,28 @@ public sealed class HomeController(
             return View(model);
         }
 
-        await SignInUserAsync(user, model.RememberMe);
+        var deviceId = GetOrCreateWebDeviceId();
+        var session = await deviceSessions.OpenAsync(
+            user,
+            deviceId,
+            DescribeWebDevice(Request.Headers.UserAgent.ToString()),
+            cancellationToken);
+        await SignInUserAsync(user, model.RememberMe, session.Id);
 
+        if (user.MustChangePassword)
+        {
+            TempData["Error"] = "Yöneticiniz tarafından verilen geçici parolayı değiştirmelisiniz.";
+            return RedirectToAction(nameof(Account), new { section = "security" });
+        }
         return IsLocal(model.ReturnUrl) ? LocalRedirect(model.ReturnUrl!) : RedirectToAction(nameof(Index));
     }
 
     [Authorize]
     [HttpPost]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
+        if (TryUserId(out var userId) && TrySessionId(out var sessionId))
+            await deviceSessions.RevokeAsync(userId, sessionId, cancellationToken);
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return RedirectToAction(nameof(Login));
     }
@@ -273,19 +298,66 @@ public sealed class HomeController(
     private bool TryUserId(out Guid userId) =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
 
-    private Task SignInUserAsync(FaydamPDKS.Core.Models.User user, bool isPersistent)
+    private bool TrySessionId(out Guid sessionId) =>
+        Guid.TryParse(User.FindFirstValue("sid"), out sessionId);
+
+    private Task SignInUserAsync(
+        FaydamPDKS.Core.Models.User user,
+        bool isPersistent,
+        Guid? sessionId = null)
     {
-        var claims = new[]
+        sessionId ??= Guid.TryParse(User.FindFirstValue("sid"), out var currentSessionId)
+            ? currentSessionId
+            : null;
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Name),
             new Claim(ClaimTypes.Email, user.Email),
             new Claim(ClaimTypes.Role, user.Role?.Name ?? "Personel"),
-            new Claim("profile_image", user.ProfileImageUrl ?? string.Empty)
+            new Claim("profile_image", user.ProfileImageUrl ?? string.Empty),
+            new Claim("must_change_password", user.MustChangePassword ? "true" : "false")
         };
+        if (sessionId.HasValue) claims.Add(new Claim("sid", sessionId.Value.ToString()));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
         return HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties { IsPersistent = isPersistent, AllowRefresh = true });
+    }
+
+    private string GetOrCreateWebDeviceId()
+    {
+        const string cookieName = "Faydam.WebDevice";
+        if (Request.Cookies.TryGetValue(cookieName, out var current)
+            && !string.IsNullOrWhiteSpace(current))
+            return current;
+
+        var deviceId = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        Response.Cookies.Append(cookieName, deviceId, new CookieOptions
+        {
+            HttpOnly = true,
+            IsEssential = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddYears(1)
+        });
+        return deviceId;
+    }
+
+    private static string DescribeWebDevice(string userAgent)
+    {
+        var browser = userAgent.Contains("Edg/", StringComparison.OrdinalIgnoreCase) ? "Microsoft Edge"
+            : userAgent.Contains("Firefox/", StringComparison.OrdinalIgnoreCase) ? "Firefox"
+            : userAgent.Contains("Chrome/", StringComparison.OrdinalIgnoreCase) ? "Google Chrome"
+            : userAgent.Contains("Safari/", StringComparison.OrdinalIgnoreCase) ? "Safari"
+            : "Web tarayıcısı";
+        var platform = userAgent.Contains("Windows", StringComparison.OrdinalIgnoreCase) ? "Windows"
+            : userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase) ? "Android"
+            : userAgent.Contains("iPhone", StringComparison.OrdinalIgnoreCase)
+                || userAgent.Contains("iPad", StringComparison.OrdinalIgnoreCase) ? "iOS"
+            : userAgent.Contains("Mac OS", StringComparison.OrdinalIgnoreCase) ? "macOS"
+            : userAgent.Contains("Linux", StringComparison.OrdinalIgnoreCase) ? "Linux"
+            : null;
+        return platform is null ? $"{browser} (Web)" : $"{browser} · {platform} (Web)";
     }
 
     private static bool IsSupportedImageHeader(byte[] header, int length, string extension) => extension switch

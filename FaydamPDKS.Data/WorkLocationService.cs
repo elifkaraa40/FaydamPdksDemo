@@ -1,5 +1,6 @@
 using FaydamPDKS.Core.DTOs;
 using FaydamPDKS.Core.Enums;
+using FaydamPDKS.Core.Exceptions;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -64,17 +65,35 @@ public sealed class WorkLocationService(
             r.Days = [];
         }
         EnsureEnabled(); Validate(r.StartDate, r.EndDate, r.RecurrenceType, r.Days);
+        if (r.EndDate.DayNumber - r.StartDate.DayNumber + 1 > 90)
+            throw new InvalidOperationException("Çalışma konumu tarih aralığı en fazla 90 gün olabilir.");
         var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
         if (r.StartDate < today) throw new InvalidOperationException("Geçmiş çalışma konumu kayıtları puantaj düzeltme talebi olarak gönderilmelidir.");
         if (r.LocationType is not (WorkLocationType.Field or WorkLocationType.Remote))
             throw new InvalidOperationException("Talep türü Field veya Remote olmalıdır.");
-        if (await db.FieldWorkRequests.AnyAsync(x => x.UserId == userId
+        var workLocationOverlap = await db.FieldWorkRequests.AsNoTracking()
+            .Where(x => x.UserId == userId
                 && (x.Status == WorkLocationRequestStatus.Pending || x.Status == WorkLocationRequestStatus.Approved)
-                && x.StartDate <= r.EndDate && x.EndDate >= r.StartDate, ct)
-            || await db.LeaveRequests.AnyAsync(x => x.UserId == userId
+                && x.StartDate <= r.EndDate && x.EndDate >= r.StartDate)
+            .OrderBy(x => x.StartDate)
+            .FirstOrDefaultAsync(ct);
+        if (workLocationOverlap is not null)
+            throw new WorkLocationOverlapException(
+                workLocationOverlap.StartDate,
+                workLocationOverlap.EndDate,
+                "WorkLocation");
+
+        var leaveOverlap = await db.LeaveRequests.AsNoTracking()
+            .Where(x => x.UserId == userId
                 && (x.Status == LeaveRequestStatus.Pending || x.Status == LeaveRequestStatus.Approved)
-                && x.StartDate <= r.EndDate && x.EndDate >= r.StartDate, ct))
-            throw new InvalidOperationException("Seçilen tarih aralığında çakışan izin veya çalışma konumu kaydı var.");
+                && x.StartDate <= r.EndDate && x.EndDate >= r.StartDate)
+            .OrderBy(x => x.StartDate)
+            .FirstOrDefaultAsync(ct);
+        if (leaveOverlap is not null)
+            throw new WorkLocationOverlapException(
+                leaveOverlap.StartDate,
+                leaveOverlap.EndDate,
+                "Leave");
         if (r.LocationType == WorkLocationType.Field && string.IsNullOrWhiteSpace(r.ProjectName))
             throw new InvalidOperationException("Saha görevi için proje bilgisi zorunludur.");
         var entity = new FieldWorkRequest { Id = Guid.NewGuid(), UserId = userId, LocationType = r.LocationType,

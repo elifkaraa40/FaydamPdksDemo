@@ -109,7 +109,7 @@ public sealed class ManagerMobileService(
         {
             var workDays = 0d;
             for (var date = x.StartDate; date <= x.EndDate; date = date.AddDays(1))
-                if ((await workCalendar.ResolveAsync(x.UserId, date, ct)).IsWorkingDay) workDays++;
+                workDays += (await workCalendar.ResolveAsync(x.UserId, date, ct)).WorkdayWeight;
             if (x.DayPortion != LeaveDayPortion.FullDay) workDays = Math.Min(.5, workDays);
             mapped.Add(new(x.Id, x.UserId, x.User.Name, x.LeaveType, x.StartDate, x.EndDate,
                 x.EndDate.DayNumber - x.StartDate.DayNumber + 1, workDays, x.DayPortion, x.Reason, x.Status, x.CreatedAt, x.ReviewNote));

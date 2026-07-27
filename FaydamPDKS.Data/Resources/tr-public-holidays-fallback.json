@@ -1,0 +1,27 @@
+{
+  "source": "T.C. Diyanet İşleri Başkanlığı Dini Günler Takvimi",
+  "sourceUrl": "https://mobil.diyanet.gov.tr/mobile/dinigunler/dinigunler.html",
+  "verifiedAt": "2026-07-27",
+  "years": {
+    "2024": {
+      "ramadanEve": "2024-04-09",
+      "sacrificeEve": "2024-06-15"
+    },
+    "2025": {
+      "ramadanEve": "2025-03-29",
+      "sacrificeEve": "2025-06-05"
+    },
+    "2026": {
+      "ramadanEve": "2026-03-19",
+      "sacrificeEve": "2026-05-26"
+    },
+    "2027": {
+      "ramadanEve": "2027-03-08",
+      "sacrificeEve": "2027-05-15"
+    },
+    "2028": {
+      "ramadanEve": "2028-02-25",
+      "sacrificeEve": "2028-05-04"
+    }
+  }
+}

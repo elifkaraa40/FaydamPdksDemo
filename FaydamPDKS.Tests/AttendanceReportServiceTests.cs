@@ -27,6 +27,8 @@ public sealed class AttendanceReportServiceTests
         Assert.Equal("Erken", row.ShiftName);
         Assert.Equal(450, row.ExpectedMinutes);
         Assert.Equal("Complete", row.Status);
+        Assert.Equal(new DateTimeOffset(2026, 7, 14, 8, 0, 0, TimeSpan.FromHours(3)), row.FirstEntry);
+        Assert.Equal(new DateTimeOffset(2026, 7, 14, 16, 0, 0, TimeSpan.FromHours(3)), row.LastExit);
     }
 
     [Fact]

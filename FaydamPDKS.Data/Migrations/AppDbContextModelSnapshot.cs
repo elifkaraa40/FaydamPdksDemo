@@ -413,6 +413,82 @@ namespace FaydamPDKS.Data.Migrations
                     b.ToTable("departments");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.DeviceSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("DeviceIdHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("device_id_hash");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("device_name");
+
+                    b.Property<DateTimeOffset>("LastActiveAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_active_at");
+
+                    b.Property<DateTimeOffset>("LoggedInAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("logged_in_at");
+
+                    b.Property<string>("PushLanguage")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasColumnName("push_language");
+
+                    b.Property<string>("PushPlatform")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("push_platform");
+
+                    b.Property<string>("PushToken")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("push_token");
+
+                    b.Property<DateTimeOffset?>("PushTokenDisabledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("push_token_disabled_at");
+
+                    b.Property<DateTimeOffset?>("PushTokenUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("push_token_updated_at");
+
+                    b.Property<string>("RevokeReason")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("revoke_reason");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PushToken")
+                        .IsUnique()
+                        .HasFilter("push_token IS NOT NULL");
+
+                    b.HasIndex("UserId", "RevokedAt");
+
+                    b.HasIndex("UserId", "DeviceIdHash", "RevokedAt");
+
+                    b.ToTable("device_sessions");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.EmployeeShiftAssignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -544,6 +620,36 @@ namespace FaydamPDKS.Data.Migrations
                     b.ToTable("field_work_request_days");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.HolidayCalendarSyncState", b =>
+                {
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.Property<DateTimeOffset>("LastAttemptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_attempted_at");
+
+                    b.Property<DateTimeOffset?>("LastSuccessfulAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_successful_at");
+
+                    b.Property<string>("SourceUrl")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("source_url");
+
+                    b.Property<string>("Warning")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("warning");
+
+                    b.HasKey("Year");
+
+                    b.ToTable("holiday_calendar_sync_states");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.LeaveRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -650,6 +756,66 @@ namespace FaydamPDKS.Data.Migrations
                     b.ToTable("notifications");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.PasswordResetRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Channel")
+                        .HasColumnType("integer")
+                        .HasColumnName("channel");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("review_note");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_user_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("TokenExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("token_expires_at");
+
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasFilter("token_hash IS NOT NULL");
+
+                    b.HasIndex("UserId", "Channel", "Status");
+
+                    b.ToTable("password_reset_requests");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.Permission", b =>
                 {
                     b.Property<int>("Id")
@@ -711,6 +877,58 @@ namespace FaydamPDKS.Data.Migrations
                     b.ToTable("Project");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.PushNotificationDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_count");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DeviceSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_session_id");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("error_code");
+
+                    b.Property<DateTimeOffset?>("LastAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_attempt_at");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<Guid>("NotificationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("notification_id");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceSessionId");
+
+                    b.HasIndex("NotificationId", "DeviceSessionId")
+                        .IsUnique();
+
+                    b.HasIndex("SentAt", "NextAttemptAt");
+
+                    b.ToTable("push_notification_deliveries");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -726,6 +944,10 @@ namespace FaydamPDKS.Data.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)")
                         .HasColumnName("device_name");
+
+                    b.Property<Guid?>("DeviceSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_session_id");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
@@ -750,6 +972,8 @@ namespace FaydamPDKS.Data.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DeviceSessionId");
 
                     b.HasIndex("TokenHash")
                         .IsUnique();
@@ -910,6 +1134,10 @@ namespace FaydamPDKS.Data.Migrations
                     b.Property<bool>("IsSmsNotificationEnabled")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean")
+                        .HasColumnName("must_change_password");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -975,11 +1203,28 @@ namespace FaydamPDKS.Data.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("day_type");
 
+                    b.Property<bool>("IsHalfDay")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_half_day");
+
+                    b.Property<bool>("IsSystemGenerated")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_system_generated");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)")
                         .HasColumnName("name");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTimeOffset?>("SourceUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("source_updated_at");
 
                     b.Property<Guid?>("WorkplaceId")
                         .HasColumnType("uuid")
@@ -1240,6 +1485,17 @@ namespace FaydamPDKS.Data.Migrations
                     b.Navigation("Workplace");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.DeviceSession", b =>
+                {
+                    b.HasOne("FaydamPDKS.Core.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.EmployeeShiftAssignment", b =>
                 {
                     b.HasOne("FaydamPDKS.Core.Models.User", "Employee")
@@ -1303,6 +1559,17 @@ namespace FaydamPDKS.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.PasswordResetRequest", b =>
+                {
+                    b.HasOne("FaydamPDKS.Core.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.Permission", b =>
                 {
                     b.HasOne("FaydamPDKS.Core.Models.User", "User")
@@ -1314,13 +1581,39 @@ namespace FaydamPDKS.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FaydamPDKS.Core.Models.PushNotificationDelivery", b =>
+                {
+                    b.HasOne("FaydamPDKS.Core.Models.DeviceSession", "DeviceSession")
+                        .WithMany()
+                        .HasForeignKey("DeviceSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FaydamPDKS.Core.Models.Notification", "Notification")
+                        .WithMany()
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DeviceSession");
+
+                    b.Navigation("Notification");
+                });
+
             modelBuilder.Entity("FaydamPDKS.Core.Models.RefreshToken", b =>
                 {
+                    b.HasOne("FaydamPDKS.Core.Models.DeviceSession", "DeviceSession")
+                        .WithMany()
+                        .HasForeignKey("DeviceSessionId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("FaydamPDKS.Core.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("DeviceSession");
 
                     b.Navigation("User");
                 });

@@ -34,6 +34,6 @@ public sealed class EmailRegistrationService(AppDbContext context, MobileTokenSe
         await context.SaveChangesAsync(cancellationToken);
         await managerNotifications.NotifyAsync(NotificationType.RegistrationApprovalRequested, "Yeni kullanıcı onayı",
             $"{user.Name} ({user.Email}) mobil kayıt onayı bekliyor.", user.Id, cancellationToken);
-        return await tokens.IssueForUserAsync(user, request.DeviceName, cancellationToken);
+        return await tokens.IssueForUserAsync(user, request.DeviceId, request.DeviceName, cancellationToken);
     }
 }

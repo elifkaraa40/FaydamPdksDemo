@@ -1,9 +1,15 @@
 using FaydamPDKS.Api;
+using FaydamPDKS.Api.Controllers;
 using FaydamPDKS.Core.DTOs;
+using FaydamPDKS.Core.DTOs.Common;
 using FaydamPDKS.Core.Enums;
+using FaydamPDKS.Core.Exceptions;
 using FaydamPDKS.Core.Models;
 using FaydamPDKS.Data;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using System.Security.Claims;
 using Xunit;
 
 namespace FaydamPDKS.Tests;
@@ -22,9 +28,77 @@ public sealed class MobileLeaveRequestServiceTests
 
         Assert.Equal(LeaveRequestStatus.Pending, created.Status);
         Assert.Equal(5, created.CalendarDayCount);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(
+        var overlap = await Assert.ThrowsAsync<LeaveOverlapException>(() => service.CreateAsync(
             userId,
             new CreateLeaveRequestDto(LeaveType.Excuse, new DateOnly(2026, 7, 24), new DateOnly(2026, 7, 25), null)));
+        Assert.Equal(new DateOnly(2026, 7, 20), overlap.ConflictingStartDate);
+        Assert.Equal(new DateOnly(2026, 7, 24), overlap.ConflictingEndDate);
+    }
+
+    [Fact]
+    public async Task Controller_returns_standard_conflict_code_and_dates()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var userId = await SeedUserAsync(context);
+        var service = CreateService(context);
+        await service.CreateAsync(userId, new CreateLeaveRequestDto(
+            LeaveType.Annual,
+            new DateOnly(2026, 7, 20),
+            new DateOnly(2026, 7, 24),
+            "Tatil"));
+        var controller = new MobileLeaveRequestsController(service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [
+                        new Claim("sub", userId.ToString())
+                    ], "test"))
+                }
+            }
+        };
+
+        var result = await controller.Create(new CreateLeaveRequestDto(
+            LeaveType.Excuse,
+            new DateOnly(2026, 7, 23),
+            new DateOnly(2026, 7, 25),
+            "Çakışan talep"), CancellationToken.None);
+
+        var conflict = Assert.IsType<ConflictObjectResult>(result);
+        var error = Assert.IsType<ApiErrorDto>(conflict.Value);
+        Assert.Equal("LEAVE_OVERLAP", error.Code);
+        Assert.Equal("2026-07-20", error.Errors!["conflictingStartDate"].Single());
+        Assert.Equal("2026-07-24", error.Errors["conflictingEndDate"].Single());
+    }
+
+    [Theory]
+    [InlineData(LeaveType.Sick)]
+    [InlineData(LeaveType.Excuse)]
+    [InlineData(LeaveType.Unpaid)]
+    public async Task Active_leave_blocks_overlapping_request_of_every_other_type(
+        LeaveType secondLeaveType)
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var userId = await SeedUserAsync(context);
+        var service = CreateService(context);
+        await service.CreateAsync(userId, new CreateLeaveRequestDto(
+            LeaveType.Annual,
+            new DateOnly(2026, 7, 23),
+            new DateOnly(2026, 7, 23),
+            "Yıllık izin"));
+
+        var overlap = await Assert.ThrowsAsync<LeaveOverlapException>(() =>
+            service.CreateAsync(userId, new CreateLeaveRequestDto(
+                secondLeaveType,
+                new DateOnly(2026, 7, 23),
+                new DateOnly(2026, 7, 23),
+                "Farklı izin türü")));
+
+        Assert.Equal(new DateOnly(2026, 7, 23), overlap.ConflictingStartDate);
+        Assert.Equal(new DateOnly(2026, 7, 23), overlap.ConflictingEndDate);
+        Assert.Single(context.LeaveRequests);
     }
 
     [Fact]

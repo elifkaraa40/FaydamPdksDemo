@@ -6,4 +6,5 @@ public interface IMobileProfileService
 {
     Task<MobileProfileDto?> GetAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<MobileProfileDto?> UpdateAsync(Guid userId, UpdateMobileProfileDto request, CancellationToken cancellationToken = default);
+    Task<bool> ChangePasswordAsync(Guid userId, ChangeMobilePasswordDto request, CancellationToken cancellationToken = default);
 }

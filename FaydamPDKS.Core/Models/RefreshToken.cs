@@ -15,6 +15,11 @@ public sealed class RefreshToken
 
     public User User { get; set; } = null!;
 
+    [Column("device_session_id")]
+    public Guid? DeviceSessionId { get; set; }
+
+    public DeviceSession? DeviceSession { get; set; }
+
     [Column("token_hash"), MaxLength(128)]
     public string TokenHash { get; set; } = string.Empty;
 

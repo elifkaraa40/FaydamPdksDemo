@@ -11,7 +11,7 @@
     var isPdks = new[] { "LeaveRequests", "AttendanceQr", "Shifts", "WorkCalendar", "Organization", "WorkLocations" }
         .Contains(currentController, StringComparer.OrdinalIgnoreCase)
         || (currentController.Equals("Modules", StringComparison.OrdinalIgnoreCase) && currentAction.Equals("Pdks", StringComparison.OrdinalIgnoreCase));
-    var isPersonnel = new[] { "Employees", "Registrations" }.Contains(currentController, StringComparer.OrdinalIgnoreCase);
+    var isPersonnel = new[] { "Employees", "Registrations", "PasswordResetRequests" }.Contains(currentController, StringComparer.OrdinalIgnoreCase);
     var isReporting = new[] { "Reports", "Audit" }.Contains(currentController, StringComparer.OrdinalIgnoreCase)
         || (currentController.Equals("Modules", StringComparison.OrdinalIgnoreCase) && currentAction.Equals("Reporting", StringComparison.OrdinalIgnoreCase));
     var isActions = currentController.Equals("AttendanceCorrections", StringComparison.OrdinalIgnoreCase)
@@ -129,7 +129,9 @@
                     {
                         <a class="context-home @(currentController == "Modules" ? "active" : null)" asp-controller="Modules" asp-action="Reporting"><span>←</span> Raporlama Merkezi</a>
                         <span class="context-divider" aria-hidden="true"></span>
-                        <a class="@(currentController == "Reports" ? "active" : null)" asp-controller="Reports" asp-action="Index">PDKS Raporları</a>
+                        <a class="@(currentController == "Reports" && currentAction == "Attendance" ? "active" : null)" asp-controller="Reports" asp-action="Attendance">Puantaj Özeti</a>
+                        <a class="@(currentController == "Reports" && currentAction == "Transitions" ? "active" : null)" asp-controller="Reports" asp-action="Transitions">QR Hareketleri</a>
+                        <a class="@(currentController == "Reports" && currentAction == "Leaves" ? "active" : null)" asp-controller="Reports" asp-action="Leaves">İzin Raporu</a>
                         <a class="@(currentController == "Audit" ? "active" : null)" asp-controller="Audit" asp-action="Index">Denetim Kayıtları</a>
                     }
                     else if (isActions)
@@ -152,7 +154,7 @@
                 @foreach (var item in layoutNotificationItems.Take(3))
                 {
                     var isManagerNotice = User.IsInRole("Yonetici");
-                    var targetController = isManagerNotice && item.Type == NotificationType.RegistrationApprovalRequested ? "Registrations" : isManagerNotice && item.Type == NotificationType.LeaveRequestCreated ? "LeaveRequests" : isManagerNotice && item.Type is NotificationType.AttendanceCorrectionCreated or NotificationType.MissingAttendanceDetected ? "AttendanceCorrections" : isManagerNotice && item.Type == NotificationType.FieldWorkRequestCreated ? "WorkLocations" : "MyWork";
+                    var targetController = isManagerNotice && item.Type == NotificationType.PasswordResetRequested ? "PasswordResetRequests" : isManagerNotice && item.Type == NotificationType.RegistrationApprovalRequested ? "Registrations" : isManagerNotice && item.Type == NotificationType.LeaveRequestCreated ? "LeaveRequests" : isManagerNotice && item.Type is NotificationType.AttendanceCorrectionCreated or NotificationType.MissingAttendanceDetected ? "AttendanceCorrections" : isManagerNotice && item.Type == NotificationType.FieldWorkRequestCreated ? "WorkLocations" : "MyWork";
                     var targetAction = !isManagerNotice && item.Type is NotificationType.LeaveApproved or NotificationType.LeaveRejected ? "Leaves" : !isManagerNotice && item.Type is NotificationType.AttendanceCorrectionApproved or NotificationType.AttendanceCorrectionRejected or NotificationType.AttendanceWarning ? "Records" : !isManagerNotice && item.Type is NotificationType.FieldWorkRequestApproved or NotificationType.FieldWorkRequestRejected or NotificationType.WorkLocationAssigned ? "FieldWork" : "Index";
                     <div class="live-notification-item">
                         <span aria-hidden="true"></span><div><strong>@item.Title</strong><p>@item.Message</p></div>

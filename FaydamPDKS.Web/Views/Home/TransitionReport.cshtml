@@ -1,0 +1,42 @@
+@model FaydamPDKS.Web.Models.TransitionReportViewModel
+@{
+    ViewData["Title"] = "QR Hareketleri";
+    var entryCount = Model.Rows.Count(x => x.EventType == "Giris");
+    var exitCount = Model.Rows.Count(x => x.EventType == "Cikis");
+    string EventLabel(string value) => value switch { "Giris" => "Giriş", "Cikis" => "Çıkış", _ => value };
+}
+<section class="hero compact-hero">
+    <div><p class="eyebrow">Raporlama</p><h1>QR hareketleri</h1><p>Ham geçiş kayıtlarını tarih, saat, bölge ve kaynak bilgisiyle inceleyin.</p></div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a class="btn btn-light" asp-action="ExportTransitionsCsv" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-eventType="@Model.SelectedEventType">CSV indir</a>
+        <a class="btn btn-success" asp-action="ExportTransitionsExcel" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-eventType="@Model.SelectedEventType">Excel indir</a>
+        <a class="btn btn-primary" asp-action="ExportTransitionsPdf" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")" asp-route-employeeId="@Model.SelectedEmployeeId" asp-route-eventType="@Model.SelectedEventType">PDF indir</a>
+    </div>
+</section>
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<section class="panel report-filter" aria-labelledby="transition-filter-title">
+    <form asp-action="Transitions" method="get" class="filter-form">
+        <h2 id="transition-filter-title" class="visually-hidden">QR hareketleri filtresi</h2>
+        <div class="form-field"><label for="from">Başlangıç</label><input id="from" name="from" type="date" value="@Model.From.ToString("yyyy-MM-dd")" required /></div>
+        <div class="form-field"><label for="to">Bitiş</label><input id="to" name="to" type="date" value="@Model.To.ToString("yyyy-MM-dd")" required /></div>
+        <div class="form-field"><label for="employeeId">Personel</label><select id="employeeId" name="employeeId"><option value="">Tüm personel</option>@foreach (var employee in Model.Employees) { <option value="@employee.Id" selected="@(Model.SelectedEmployeeId == employee.Id ? "selected" : null)">@employee.EmployeeNumber · @employee.FullName</option> }</select></div>
+        <div class="form-field"><label for="eventType">İşlem</label><select id="eventType" name="eventType"><option value="">Giriş ve çıkış</option><option value="Giris" selected="@(Model.SelectedEventType == "Giris" ? "selected" : null)">Giriş</option><option value="Cikis" selected="@(Model.SelectedEventType == "Cikis" ? "selected" : null)">Çıkış</option></select></div>
+        <button class="btn btn-primary" type="submit">Hareketleri getir</button>
+        <small>Türkiye saatine göre gösterilir. En fazla 93 gün seçilebilir.</small>
+    </form>
+</section>
+
+<section class="panel mt-4" aria-labelledby="transition-list-title">
+    <div class="panel-heading"><div><p class="eyebrow">@Model.From.ToString("dd.MM.yyyy") – @Model.To.ToString("dd.MM.yyyy")</p><h2 id="transition-list-title">Ham QR hareketleri</h2></div><div class="d-flex gap-2 flex-wrap"><span class="summary-pill">@Model.Rows.Count toplam</span><span class="summary-pill">@entryCount giriş</span><span class="summary-pill">@exitCount çıkış</span></div></div>
+    @if (Model.Rows.Count == 0) { <div class="panel-empty"><strong>Seçilen aralıkta QR hareketi bulunamadı.</strong></div> }
+    else { <div class="table-responsive"><table class="table align-middle">
+        <thead><tr><th>Tarih</th><th>Saat</th><th>Personel</th><th>İşlem</th><th>İşyeri / bölge</th><th>Kaynak</th></tr></thead>
+        <tbody>@foreach (var row in Model.Rows) { <tr>
+            <td><strong>@row.WorkDate.ToString("dd.MM.yyyy")</strong></td><td><strong>@row.EventTime.ToString("HH:mm")</strong></td>
+            <td><strong>@row.EmployeeName</strong><small>@row.EmployeeNumber · @(row.Department ?? "Bölüm yok")</small></td>
+            <td><span class="status @(row.EventType == "Giris" ? "success" : "neutral")">@EventLabel(row.EventType)</span></td>
+            <td><strong>@(row.WorkplaceName ?? "İşyeri yok")</strong><small>@row.ZoneName</small></td><td>@row.Source</td>
+        </tr> }</tbody>
+    </table></div> }
+</section>

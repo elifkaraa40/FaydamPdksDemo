@@ -6,25 +6,31 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using FaydamPDKS.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FaydamPDKS.Api.Controllers;
 
 [ApiController, Authorize]
 [Route("api/v1/me")]
 [Produces("application/json")]
-public sealed class MobileProfileController(IMobileProfileService profiles, IPersonalDataExportService personalData, AppDbContext context) : ControllerBase
+public sealed class MobileProfileController(
+    IMobileProfileService profiles,
+    IPersonalDataExportService personalData,
+    IMobileAuthService auth,
+    AppDbContext context) : ControllerBase
 {
     [HttpGet("status")]
     public async Task<IActionResult> Status(CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var userId)) return UnauthorizedError();
         var user = await context.Users.AsNoTracking().Where(x => x.Id == userId)
-            .Select(x => new { x.AccountStatus, x.IsActive }).SingleOrDefaultAsync(cancellationToken);
+            .Select(x => new { x.AccountStatus, x.IsActive, x.MustChangePassword }).SingleOrDefaultAsync(cancellationToken);
         if (user is null) return NotFound();
         return Ok(new
         {
             accountStatus = user.AccountStatus.ToString(),
             canUseApplication = user.IsActive && user.AccountStatus == FaydamPDKS.Core.Enums.AccountStatus.Active,
+            mustChangePassword = user.MustChangePassword,
             message = user.AccountStatus switch
             {
                 FaydamPDKS.Core.Enums.AccountStatus.PendingApproval => "Kaydınız yönetici onayı bekliyor.",
@@ -33,6 +39,44 @@ public sealed class MobileProfileController(IMobileProfileService profiles, IPer
                 _ => "Hesabınız aktif."
             }
         });
+    }
+
+    [HttpPost("change-password")]
+    [EnableRateLimiting("mobile-auth")]
+    public async Task<IActionResult> ChangePassword(ChangeMobilePasswordDto request, CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId)) return UnauthorizedError();
+        try
+        {
+            if (!await profiles.ChangePasswordAsync(userId, request, cancellationToken)) return NotFound();
+            await auth.RevokeAllAsync(userId, cancellationToken);
+            return Ok(new
+            {
+                requiresLogin = true,
+                message = "Şifreniz değiştirildi. Güvenliğiniz için tüm cihaz oturumları kapatıldı."
+            });
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "CURRENT_PASSWORD_INVALID")
+        {
+            return BadRequest(new ApiErrorDto(
+                "CURRENT_PASSWORD_INVALID",
+                "Mevcut şifre doğru değil.",
+                TraceId: HttpContext.TraceIdentifier));
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "PASSWORD_CONFIRMATION_MISMATCH")
+        {
+            return BadRequest(new ApiErrorDto(
+                "PASSWORD_CONFIRMATION_MISMATCH",
+                "Yeni şifre ve tekrarı eşleşmiyor.",
+                TraceId: HttpContext.TraceIdentifier));
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "PASSWORD_REUSE_NOT_ALLOWED")
+        {
+            return BadRequest(new ApiErrorDto(
+                "PASSWORD_REUSE_NOT_ALLOWED",
+                "Yeni şifre mevcut şifreden farklı olmalıdır.",
+                TraceId: HttpContext.TraceIdentifier));
+        }
     }
 
     [HttpGet]

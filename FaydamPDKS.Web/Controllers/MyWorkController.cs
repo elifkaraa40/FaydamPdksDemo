@@ -219,7 +219,7 @@ public sealed class MyWorkController(
         {
             var count = 0d;
             for (var date = leave.StartDate; date <= leave.EndDate; date = date.AddDays(1))
-                if ((await workCalendar.ResolveAsync(userId, date, cancellationToken)).IsWorkingDay) count++;
+                count += (await workCalendar.ResolveAsync(userId, date, cancellationToken)).WorkdayWeight;
             result[leave.Id] = leave.DayPortion == LeaveDayPortion.FullDay ? count : Math.Min(.5, count);
         }
         return result;
@@ -235,7 +235,7 @@ public sealed class MyWorkController(
     }
 
     private bool TryUserId(out Guid id) => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out id);
-    private static string Time(DateTimeOffset? value) => value?.ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
+    private static string Time(DateTimeOffset? value) => value?.ToString("HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
     private static string Csv(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
     private static string StatusLabel(string status) => status switch
     {

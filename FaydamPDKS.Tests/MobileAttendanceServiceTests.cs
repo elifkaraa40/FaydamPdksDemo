@@ -46,6 +46,86 @@ public sealed class MobileAttendanceServiceTests
     }
 
     [Fact]
+    public async Task Today_summary_does_not_carry_an_exit_before_todays_first_entry()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var userId = Guid.NewGuid();
+        context.Users.Add(new User { Id = userId, Name = "New Day", Email = "new-day@faydam.com", RoleId = Guid.NewGuid() });
+        context.AccessLogs.AddRange(
+            new AccessLog
+            {
+                UserId = userId,
+                ZoneId = 1,
+                LogDate = new DateTime(2026, 7, 14, 3, 0, 0, DateTimeKind.Utc),
+                LogType = "Cikis",
+                Source = "MobileQr"
+            },
+            new AccessLog
+            {
+                UserId = userId,
+                ZoneId = 1,
+                LogDate = new DateTime(2026, 7, 14, 6, 15, 0, DateTimeKind.Utc),
+                LogType = "Giris",
+                Source = "MobileQr"
+            });
+        await context.SaveChangesAsync();
+
+        var summary = await CreateService(context).GetTodayAsync(userId);
+
+        Assert.Equal("MissingExit", summary.Status);
+        Assert.NotNull(summary.FirstEntry);
+        Assert.Null(summary.LastExit);
+        var localEntry = summary.FirstEntry!.Value.ToOffset(TimeSpan.FromHours(3));
+        Assert.Equal(9, localEntry.Hour);
+        Assert.Equal(15, localEntry.Minute);
+    }
+
+    [Fact]
+    public async Task Today_summary_with_only_a_leading_exit_reports_no_record()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var userId = Guid.NewGuid();
+        context.Users.Add(new User { Id = userId, Name = "Only Exit", Email = "only-exit@faydam.com", RoleId = Guid.NewGuid() });
+        context.AccessLogs.Add(new AccessLog
+        {
+            UserId = userId,
+            ZoneId = 1,
+            LogDate = new DateTime(2026, 7, 14, 3, 0, 0, DateTimeKind.Utc),
+            LogType = "Cikis",
+            Source = "MobileQr"
+        });
+        await context.SaveChangesAsync();
+
+        var summary = await CreateService(context).GetTodayAsync(userId);
+
+        Assert.Equal("NoRecord", summary.Status);
+        Assert.Null(summary.FirstEntry);
+        Assert.Null(summary.LastExit);
+        Assert.Equal(0, summary.WorkedMinutes);
+        Assert.Equal(0, summary.LateMinutes);
+        Assert.Equal(0, summary.OvertimeMinutes);
+    }
+
+    [Fact]
+    public async Task Qr_history_returns_only_mobile_qr_events_in_descending_order()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var userId = Guid.NewGuid();
+        context.Users.Add(new User { Id = userId, Name = "History", Email = "history@faydam.com", RoleId = Guid.NewGuid() });
+        context.AccessLogs.AddRange(
+            new AccessLog { UserId = userId, ZoneId = 1, LogDate = new DateTime(2026, 7, 13, 6, 0, 0, DateTimeKind.Utc), LogType = "Giris", Source = "MobileQr" },
+            new AccessLog { UserId = userId, ZoneId = 1, LogDate = new DateTime(2026, 7, 13, 15, 0, 0, DateTimeKind.Utc), LogType = "Cikis", Source = "MobileQr" },
+            new AccessLog { UserId = userId, ZoneId = 1, LogDate = new DateTime(2026, 7, 14, 5, 0, 0, DateTimeKind.Utc), LogType = "Giris", Source = "Terminal" });
+        await context.SaveChangesAsync();
+
+        var history = await CreateService(context).GetQrHistoryAsync(userId, 20);
+
+        Assert.Equal(2, history.Count);
+        Assert.Equal("Exit", history[0].EventType);
+        Assert.Equal("Entry", history[1].EventType);
+    }
+
+    [Fact]
     public async Task Uses_employee_shift_assignment_for_attendance_calculation()
     {
         await using var context = TestInfrastructure.CreateContext();

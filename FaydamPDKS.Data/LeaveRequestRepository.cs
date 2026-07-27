@@ -23,6 +23,21 @@ public sealed class LeaveRequestRepository(AppDbContext context) : Repository<Le
             x.StartDate <= endDate && x.EndDate >= startDate,
             cancellationToken);
 
+    public Task<LeaveRequest?> FindActiveOverlapAsync(
+        Guid userId,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default) =>
+        Context.LeaveRequests.AsNoTracking()
+            .Where(x =>
+                x.UserId == userId
+                && (x.Status == LeaveRequestStatus.Pending
+                    || x.Status == LeaveRequestStatus.Approved)
+                && x.StartDate <= endDate
+                && x.EndDate >= startDate)
+            .OrderBy(x => x.StartDate)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<LeaveRequest>> GetAllWithUsersAsync(CancellationToken cancellationToken = default) =>
         await Context.LeaveRequests.AsNoTracking().Include(x => x.User)
             .OrderBy(x => x.Status == LeaveRequestStatus.Pending ? 0 : 1)

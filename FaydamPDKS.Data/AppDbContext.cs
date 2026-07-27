@@ -17,6 +17,8 @@ namespace FaydamPDKS.Data
         public DbSet<Zone> Zones { get; set; }
         public DbSet<Report> Reports { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<DeviceSession> DeviceSessions { get; set; }
+        public DbSet<PushNotificationDelivery> PushNotificationDeliveries { get; set; }
         public DbSet<LeaveRequest> LeaveRequests { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Shift> Shifts { get; set; }
@@ -26,6 +28,7 @@ namespace FaydamPDKS.Data
         public DbSet<Workplace> Workplaces { get; set; }
         public DbSet<Department> Departments { get; set; }
         public DbSet<WorkCalendarDay> WorkCalendarDays { get; set; }
+        public DbSet<HolidayCalendarSyncState> HolidayCalendarSyncStates { get; set; }
         public DbSet<AttendanceTerminal> AttendanceTerminals { get; set; }
         public DbSet<AttendanceQrCode> AttendanceQrCodes { get; set; }
         public DbSet<BreakRecord> BreakRecords { get; set; }
@@ -33,6 +36,7 @@ namespace FaydamPDKS.Data
         public DbSet<WorkLocationAssignmentDay> WorkLocationAssignmentDays { get; set; }
         public DbSet<FieldWorkRequest> FieldWorkRequests { get; set; }
         public DbSet<FieldWorkRequestDay> FieldWorkRequestDays { get; set; }
+        public DbSet<PasswordResetRequest> PasswordResetRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -68,6 +72,62 @@ namespace FaydamPDKS.Data
                 .HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PasswordResetRequest>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PasswordResetRequest>()
+                .HasIndex(x => x.TokenHash)
+                .IsUnique()
+                .HasFilter("token_hash IS NOT NULL");
+
+            modelBuilder.Entity<PasswordResetRequest>()
+                .HasIndex(x => new { x.UserId, x.Channel, x.Status });
+
+            modelBuilder.Entity<DeviceSession>()
+                .HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DeviceSession>()
+                .HasIndex(x => new { x.UserId, x.DeviceIdHash, x.RevokedAt });
+
+            modelBuilder.Entity<DeviceSession>()
+                .HasIndex(x => new { x.UserId, x.RevokedAt });
+
+            modelBuilder.Entity<DeviceSession>()
+                .HasIndex(x => x.PushToken)
+                .IsUnique()
+                .HasFilter("push_token IS NOT NULL");
+
+            modelBuilder.Entity<PushNotificationDelivery>()
+                .HasOne(x => x.Notification)
+                .WithMany()
+                .HasForeignKey(x => x.NotificationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PushNotificationDelivery>()
+                .HasOne(x => x.DeviceSession)
+                .WithMany()
+                .HasForeignKey(x => x.DeviceSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PushNotificationDelivery>()
+                .HasIndex(x => new { x.NotificationId, x.DeviceSessionId })
+                .IsUnique();
+
+            modelBuilder.Entity<PushNotificationDelivery>()
+                .HasIndex(x => new { x.SentAt, x.NextAttemptAt });
+
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne(x => x.DeviceSession)
+                .WithMany()
+                .HasForeignKey(x => x.DeviceSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<AccessLog>()
@@ -143,6 +203,7 @@ namespace FaydamPDKS.Data
                 .HasFilter("workplace_id IS NOT NULL");
             modelBuilder.Entity<WorkCalendarDay>().HasIndex(x => x.Date).IsUnique()
                 .HasFilter("workplace_id IS NULL");
+            modelBuilder.Entity<HolidayCalendarSyncState>().Property(x => x.Year).ValueGeneratedNever();
             modelBuilder.Entity<AttendanceTerminal>().HasOne(x => x.Workplace).WithMany().HasForeignKey(x => x.WorkplaceId)
                 .OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<AttendanceTerminal>().HasIndex(x => x.SerialNumber).IsUnique();

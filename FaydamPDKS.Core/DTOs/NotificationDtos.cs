@@ -11,3 +11,8 @@ public sealed record NotificationDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset? ReadAt,
     bool IsRead);
+
+public sealed record RegisterPushDeviceDto(
+    string Token,
+    string Platform,
+    string Language);

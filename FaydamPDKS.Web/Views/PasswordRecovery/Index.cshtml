@@ -1,0 +1,32 @@
+@model FaydamPDKS.Web.Models.PasswordRecoveryRequestModel
+@{ Layout = null; ViewData["Title"] = "Şifre kurtarma"; }
+<!doctype html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex, nofollow" />
+    <title>Şifre kurtarma | Faydam PDKS</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" /><link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="login-page">
+<main class="recovery-shell"><section class="recovery-card">
+    <a class="recovery-back" asp-controller="Home" asp-action="Login">← Giriş ekranına dön</a>
+    <p class="eyebrow">Hesap erişimi</p><h1>Şifrenizi nasıl sıfırlamak istersiniz?</h1>
+    <p class="login-subtitle">Güvenlik nedeniyle hesabın sistemde bulunup bulunmadığı açıklanmaz.</p>
+    @if (TempData["Success"] is string success) { <div class="alert alert-success">@success</div> }
+    @if (TempData["Error"] is string error) { <div class="alert alert-danger">@error</div> }
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <div class="recovery-options">
+        <form asp-action="Email" method="post" class="recovery-option @(Model.EmailResetAvailable ? null : "disabled")">
+            <span class="recovery-option-number">01</span><div><h2>E-postayla sıfırla</h2><p>30 dakika geçerli, tek kullanımlık bağlantı gönderilir.</p></div>
+            <label asp-for="Email">Kurumsal e-posta</label><input asp-for="Email" type="email" autocomplete="email" disabled="@(!Model.EmailResetAvailable ? "disabled" : null)" /><span asp-validation-for="Email"></span>
+            <button class="btn btn-primary" type="submit" disabled="@(!Model.EmailResetAvailable ? "disabled" : null)">Sıfırlama bağlantısı gönder</button>
+            @if (!Model.EmailResetAvailable) { <small>SMTP bilgileri tanımlandığında kullanıma açılacaktır.</small> }
+        </form>
+        <form asp-action="Manager" method="post" class="recovery-option">
+            <span class="recovery-option-number">02</span><div><h2>Yöneticiden iste</h2><p>Talebiniz yetkili yöneticilerin onay ekranına iletilir.</p></div>
+            <label for="manager-email">Kurumsal e-posta</label><input id="manager-email" name="Email" value="@Model.Email" type="email" autocomplete="email" required />
+            <button class="btn btn-outline-primary" type="submit">Yöneticiye talep gönder</button><small>Onaydan sonra geçici şifrenizi yöneticinizden almalısınız.</small>
+        </form>
+    </div>
+</section></main>
+</body></html>

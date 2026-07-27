@@ -54,7 +54,9 @@ public sealed class AttendanceReportService(
             TimeOnly.Parse(configuration["Attendance:DefaultShiftEnd"] ?? "18:00"),
             ReadInt("Attendance:LateToleranceMinutes", 5),
             ReadInt("Attendance:EarlyLeaveToleranceMinutes", 5),
-            ReadInt("Attendance:BreakMinutes", 60));
+            ReadInt("Attendance:BreakMinutes", 60),
+            ParseOptionalTime(configuration["Attendance:ScheduledBreakStart"]),
+            ParseOptionalTime(configuration["Attendance:ScheduledBreakEnd"]));
         var eventsByEmployee = logs.GroupBy(x => x.UserId).ToDictionary(x => x.Key, x => x.Select(log => new AttendanceEvent(
             log.UserId, new DateTimeOffset(DateTime.SpecifyKind(log.LogDate, DateTimeKind.Utc)),
             log.LogType.Equals("Giris", StringComparison.OrdinalIgnoreCase) ? AttendanceEventType.Entry : AttendanceEventType.Exit,
@@ -67,7 +69,14 @@ public sealed class AttendanceReportService(
             var assignment = shiftAssignments.Where(x => x.EmployeeId == employee.Id && x.ValidFrom <= date &&
                 (!x.ValidTo.HasValue || x.ValidTo.Value >= date) && x.Shift!.IsActive).OrderByDescending(x => x.ValidFrom).FirstOrDefault();
             var shift = assignment?.Shift is { } assigned
-                ? new ShiftDefinition(assigned.StartsAt, assigned.EndsAt, assigned.LateToleranceMinutes, assigned.EarlyLeaveToleranceMinutes, assigned.BreakMinutes)
+                ? new ShiftDefinition(
+                    assigned.StartsAt,
+                    assigned.EndsAt,
+                    assigned.LateToleranceMinutes,
+                    assigned.EarlyLeaveToleranceMinutes,
+                    assigned.BreakMinutes,
+                    assigned.ScheduledBreakStart,
+                    assigned.ScheduledBreakEnd)
                 : fallback;
             var correction = corrections.FirstOrDefault(x => x.UserId == employee.Id && x.WorkDate == date && x.CorrectionType == AttendanceCorrectionType.TimeCorrection);
             var rawEvents = eventsByEmployee.GetValueOrDefault(employee.Id) ?? [];
@@ -77,8 +86,10 @@ public sealed class AttendanceReportService(
             var specialDay = calendarDays.Where(x => x.Date == date && (x.WorkplaceId == employee.WorkplaceId || x.WorkplaceId == null))
                 .OrderByDescending(x => x.WorkplaceId.HasValue).FirstOrDefault();
             var isWorkingDay = specialDay is not null
-                ? specialDay.DayType == CalendarDayType.WorkingDayOverride
+                ? specialDay.DayType == CalendarDayType.WorkingDayOverride || specialDay.IsHalfDay
                 : date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
+            if (specialDay is { DayType: CalendarDayType.Holiday, IsHalfDay: true })
+                shift = shift.ShortenForHoliday(new TimeOnly(13, 0));
             var dayStartLocal = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
             var dayEndLocal = date.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
             var dayStartUtc = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(dayStartLocal, timeZone));
@@ -102,8 +113,8 @@ public sealed class AttendanceReportService(
                 continue;
             }
             rows.Add(new AttendanceReportRowDto(employee.Id, employee.EmployeeNumber, employee.Name, employee.Department?.Name ?? employee.DepartmentLegacy,
-                date, calendarLabel is null ? assignment?.Shift?.Name ?? "Varsayılan vardiya" : $"{calendarLabel} · {(assignment?.Shift?.Name ?? "Varsayılan vardiya")}", day.Status.ToString(), day.FirstEntry,
-                day.LastExit, day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes, location?.LocationType.ToString() ?? "Office", correction is null ? "QR" : "Correction", false,
+                date, calendarLabel is null ? assignment?.Shift?.Name ?? "Varsayılan vardiya" : $"{calendarLabel} · {(assignment?.Shift?.Name ?? "Varsayılan vardiya")}", day.Status.ToString(), ToLocal(day.FirstEntry, timeZone),
+                ToLocal(day.LastExit, timeZone), day.WorkedMinutes, day.ExpectedMinutes, day.LateMinutes, day.OvertimeMinutes, location?.LocationType.ToString() ?? "Office", correction is null ? "QR" : "Correction", false,
                 location?.ProjectName ?? location?.CustomerName ?? location?.Reason));
         }
         var orderedRows = employeeId.HasValue
@@ -114,6 +125,9 @@ public sealed class AttendanceReportService(
 
     private int ReadInt(string key, int fallback) =>
         int.TryParse(configuration[key], out var value) ? value : fallback;
+
+    private static TimeOnly? ParseOptionalTime(string? value) =>
+        TimeOnly.TryParse(value, out var time) ? time : null;
 
     private static int ExpectedMinutes(ShiftDefinition shift)
     {
@@ -140,4 +154,7 @@ public sealed class AttendanceReportService(
         try { return TimeZoneInfo.FindSystemTimeZoneById(id); }
         catch (TimeZoneNotFoundException) { return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"); }
     }
+
+    private static DateTimeOffset? ToLocal(DateTimeOffset? value, TimeZoneInfo timeZone) =>
+        value.HasValue ? TimeZoneInfo.ConvertTime(value.Value, timeZone) : null;
 }

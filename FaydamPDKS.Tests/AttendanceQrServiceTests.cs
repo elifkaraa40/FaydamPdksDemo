@@ -25,7 +25,8 @@ public sealed class AttendanceQrServiceTests
         await context.SaveChangesAsync();
         var service = new AttendanceQrService(context, new TestTimeProvider(now));
 
-        var result = await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now, "event-1"));
+        var result = await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(
+            rawQr, now, "event-1", "device-installation-id"));
 
         Assert.NotNull(result);
         Assert.Equal("Entry", result.EventType);
@@ -52,7 +53,8 @@ public sealed class AttendanceQrServiceTests
         await context.SaveChangesAsync();
 
         var result = await new AttendanceQrService(context, new TestTimeProvider(now))
-            .ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now.AddDays(-3), "exit-event"));
+            .ScanAsync(employee.Id, new ScanAttendanceQrRequest(
+                rawQr, now.AddDays(-3), "exit-event", "device-installation-id"));
 
         Assert.NotNull(result);
         Assert.Equal("Cikis", (await context.AccessLogs.SingleAsync()).LogType);
@@ -74,10 +76,12 @@ public sealed class AttendanceQrServiceTests
         });
         await context.SaveChangesAsync();
         var service = new AttendanceQrService(context, new TestTimeProvider(now));
-        await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now, "entry-1"));
+        await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(
+            rawQr, now, "entry-1", "device-installation-id"));
 
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now, "entry-2")));
+            service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(
+                rawQr, now, "entry-2", "device-installation-id")));
 
         Assert.Equal("DUPLICATE_TRANSITION", error.Message);
         Assert.Single(context.AccessLogs);
@@ -100,7 +104,8 @@ public sealed class AttendanceQrServiceTests
         await context.SaveChangesAsync();
 
         await new AttendanceQrService(context, new TestTimeProvider(now))
-            .ScanAsync(employee.Id, new ScanAttendanceQrRequest(rawQr, now, "exit-auto-close"));
+            .ScanAsync(employee.Id, new ScanAttendanceQrRequest(
+                rawQr, now, "exit-auto-close", "device-installation-id"));
 
         var breakRecord = await context.BreakRecords.SingleAsync();
         Assert.Equal(now, breakRecord.EndedAt);
@@ -122,11 +127,48 @@ public sealed class AttendanceQrServiceTests
         var rotated = await service.RotateAsync(first.Id);
 
         Assert.NotNull(rotated);
-        Assert.Null(await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(first.RawValue, now, "old-event")));
-        var scanned = await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(rotated.RawValue, now, "new-event"));
+        Assert.Null(await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(
+            first.RawValue, now, "old-event", "device-installation-id")));
+        var scanned = await service.ScanAsync(employee.Id, new ScanAttendanceQrRequest(
+            rotated.RawValue, now, "new-event", "device-installation-id"));
         Assert.NotNull(scanned);
         Assert.Equal("Exit", scanned.EventType);
         Assert.Equal("Cikis", (await context.AccessLogs.SingleAsync()).LogType);
+    }
+
+    [Fact]
+    public async Task Manager_qr_scan_is_written_to_audit_log()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var now = new DateTimeOffset(2026, 7, 16, 9, 0, 0, TimeSpan.Zero);
+        var (workplace, zone, manager) = await SeedAsync(context);
+        manager.Role!.Name = "Yonetici";
+        manager.Role.NormalizedName = "YONETICI";
+        const string rawQr = "manager-entry-qr";
+        context.AttendanceQrCodes.Add(new AttendanceQrCode
+        {
+            Id = Guid.NewGuid(),
+            WorkplaceId = workplace.Id,
+            ZoneId = zone.Id,
+            Name = "Giriş",
+            EventType = AttendanceEventType.Entry,
+            TokenHash = AttendanceQrService.Hash(rawQr),
+            IsActive = true,
+            CreatedAt = now
+        });
+        await context.SaveChangesAsync();
+        var timeProvider = new TestTimeProvider(now);
+        var service = new AttendanceQrService(
+            context,
+            timeProvider,
+            auditTrail: new AuditTrail(context, timeProvider));
+
+        await service.ScanAsync(manager.Id, new ScanAttendanceQrRequest(
+            rawQr, now, "manager-event", "device-installation-id"));
+
+        var audit = await context.AuditLogs.SingleAsync();
+        Assert.Equal("MOBILE_QR_SCAN", audit.Action);
+        Assert.Equal("manager-event", audit.CorrelationId);
     }
 
     private static async Task<(Workplace Workplace, Zone Zone, User Employee)> SeedAsync(FaydamPDKS.Data.AppDbContext context)

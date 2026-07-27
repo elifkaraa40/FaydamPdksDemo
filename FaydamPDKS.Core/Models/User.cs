@@ -51,6 +51,9 @@ namespace FaydamPDKS.Core.Models
         public Role? Role { get; set; }
         public string PasswordHash { get; set; } = string.Empty;
 
+        [Column("must_change_password")]
+        public bool MustChangePassword { get; set; }
+
         // Profil Yönetimi İçin Yeni Alanlar
         public string? PhoneNumber { get; set; } // Bildirimler için
         public string? ProfileImageUrl { get; set; }

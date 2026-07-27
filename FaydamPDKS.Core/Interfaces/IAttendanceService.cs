@@ -10,5 +10,9 @@ public interface IAttendanceService
         DateOnly from,
         DateOnly to,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<QrAttendanceHistoryDto>> GetQrHistoryAsync(
+        Guid employeeId,
+        int limit,
+        CancellationToken cancellationToken = default);
     Task<bool> AddEventAsync(Guid employeeId, CreateAttendanceEventRequest request, CancellationToken cancellationToken = default);
 }

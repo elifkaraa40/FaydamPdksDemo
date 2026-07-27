@@ -17,6 +17,7 @@ public sealed class ShiftResolver(AppDbContext context) : IShiftResolver
 
         return shift is null ? null : new ShiftDefinition(
             shift.StartsAt, shift.EndsAt, shift.LateToleranceMinutes,
-            shift.EarlyLeaveToleranceMinutes, shift.BreakMinutes);
+            shift.EarlyLeaveToleranceMinutes, shift.BreakMinutes,
+            shift.ScheduledBreakStart, shift.ScheduledBreakEnd);
     }
 }

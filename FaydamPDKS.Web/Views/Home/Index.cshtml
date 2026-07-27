@@ -7,6 +7,7 @@
     var lateRate = Math.Round(Model.LateCount * 100d / total);
     var leaveRate = Math.Round(Model.OnLeaveCount * 100d / total);
     var missingRate = Math.Round(Model.MissingRecordCount * 100d / total);
+    var invariant = System.Globalization.CultureInfo.InvariantCulture;
 }
 
 <section class="dashboard-heading" aria-labelledby="page-title">
@@ -32,10 +33,74 @@
 </section>
 
 <section class="metric-grid" aria-label="Günlük özet">
-    <a class="metric-card" href="#attendance"><span class="metric-icon success">✓</span><div><p>İş yerinde</p><strong>@Model.PresentCount</strong><small>Toplam @Model.TotalPersonnel personel</small></div></a>
-    <a class="metric-card" asp-controller="Reports" asp-action="Index"><span class="metric-icon warning">↗</span><div><p>Geç başlayan</p><strong>@Model.LateCount</strong><small>İlk girişlere göre</small></div></a>
-    <a class="metric-card" asp-controller="LeaveRequests" asp-action="Index"><span class="metric-icon info">◷</span><div><p>İzinli</p><strong>@Model.OnLeaveCount</strong><small>Onaylanmış izinler</small></div></a>
-    <a class="metric-card" asp-controller="Reports" asp-action="Index"><span class="metric-icon danger">!</span><div><p>Giriş kaydı yok</p><strong>@Model.MissingRecordCount</strong><small>İzinli olmayan personel</small></div></a>
+    <button class="metric-card" type="button" data-personnel-status="present"><span class="metric-icon success">✓</span><div><p>İş yerinde</p><strong>@Model.PresentCount</strong><small>Toplam @Model.TotalPersonnel personel</small></div></button>
+    <button class="metric-card" type="button" data-personnel-status="late"><span class="metric-icon warning">↗</span><div><p>Geç başlayan</p><strong>@Model.LateCount</strong><small>İlk girişlere göre</small></div></button>
+    <button class="metric-card" type="button" data-personnel-status="leave"><span class="metric-icon info">◷</span><div><p>İzinli</p><strong>@Model.OnLeaveCount</strong><small>Onaylanmış izinler</small></div></button>
+    <button class="metric-card" type="button" data-personnel-status="missing"><span class="metric-icon danger">!</span><div><p>Giriş kaydı yok</p><strong>@Model.MissingRecordCount</strong><small>İzinli olmayan personel</small></div></button>
+</section>
+
+<section class="panel dashboard-personnel-detail" data-personnel-detail hidden aria-live="polite">
+    <div class="panel-heading">
+        <div><p class="eyebrow">Personel ayrıntısı</p><h2 data-personnel-detail-title></h2></div>
+        <button type="button" class="personnel-detail-close" data-personnel-detail-close aria-label="Personel ayrıntısını kapat">×</button>
+    </div>
+    @foreach (var group in new[]
+    {
+        (Key: "present", Title: $"İş yerinde ({Model.PresentPersonnel.Count})", Description: "Bugün giriş kaydı bulunan personeller", Personnel: Model.PresentPersonnel),
+        (Key: "late", Title: $"Geç başlayan ({Model.LatePersonnel.Count})", Description: "İlk girişini vardiya başlangıcından sonra yapan personeller", Personnel: Model.LatePersonnel),
+        (Key: "leave", Title: $"İzinli ({Model.OnLeavePersonnel.Count})", Description: "Bugün için onaylanmış izni bulunan personeller", Personnel: Model.OnLeavePersonnel),
+        (Key: "missing", Title: $"Giriş kaydı yok ({Model.MissingRecordPersonnel.Count})", Description: "İzinli olmadığı halde bugün giriş kaydı bulunmayan personeller", Personnel: Model.MissingRecordPersonnel)
+    })
+    {
+        <div class="personnel-detail-group" data-personnel-group="@group.Key" data-personnel-title="@group.Title" hidden>
+            <p>@group.Description</p>
+            @if (group.Personnel.Count == 0)
+            {
+                <div class="personnel-detail-empty">Bu durumda personel bulunmuyor.</div>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var employee in group.Personnel)
+                    {
+                        var initials = string.Concat(employee.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0]));
+                        <li><span class="avatar">@initials</span><div><strong>@employee.Name</strong><small>@(string.IsNullOrWhiteSpace(employee.EmployeeNumber) ? "Personel numarası yok" : employee.EmployeeNumber)</small></div></li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+    @foreach (var day in Model.DailyAttendance)
+    {
+        @foreach (var group in new[]
+        {
+            (Key: "ontime", Label: "Zamanında", Description: "Vardiya başlangıç saatine uygun giriş yapan personeller", Personnel: day.OnTimePersonnel),
+            (Key: "late", Label: "Geç başlayan", Description: "İlk girişini vardiya başlangıcından sonra yapan personeller", Personnel: day.LatePersonnel),
+            (Key: "leave", Label: "İzinli", Description: "Bu tarih için onaylanmış izni bulunan personeller", Personnel: day.OnLeavePersonnel),
+            (Key: "missing", Label: "Kayıt yok", Description: "İzinli olmadığı halde giriş kaydı bulunmayan personeller", Personnel: day.MissingRecordPersonnel)
+        })
+        {
+            var groupKey = $"daily-{day.WorkDate:yyyy-MM-dd}-{group.Key}";
+            var groupTitle = $"{day.WorkDate.ToDateTime(TimeOnly.MinValue).ToString("dd MMMM yyyy", culture)} · {group.Label} ({group.Personnel.Count})";
+            <div class="personnel-detail-group" data-personnel-group="@groupKey" data-personnel-title="@groupTitle" hidden>
+                <p>@group.Description</p>
+                @if (group.Personnel.Count == 0)
+                {
+                    <div class="personnel-detail-empty">Bu durumda personel bulunmuyor.</div>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var employee in group.Personnel)
+                        {
+                            var initials = string.Concat(employee.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => x[0]));
+                            <li><span class="avatar">@initials</span><div><strong>@employee.Name</strong><small>@(string.IsNullOrWhiteSpace(employee.EmployeeNumber) ? "Personel numarası yok" : employee.EmployeeNumber)</small></div></li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+    }
 </section>
 
 <div class="dashboard-chart-grid">
@@ -45,8 +110,22 @@
             <a asp-controller="Reports" asp-action="Index">Detaylı rapor →</a>
         </div>
         <div class="attendance-chart-body">
-            <div class="attendance-donut" style="--present:@presentRate%; --leave:@leaveRate%; --late:@lateRate%" role="img" aria-label="@Model.TotalPersonnel çalışanın @Model.PresentCount kadarı iş yerinde, @Model.OnLeaveCount kadarı izinli, @Model.MissingRecordCount kadarının giriş kaydı yok">
-                <div><strong>@Model.TotalPersonnel</strong><span>Toplam<br />çalışan</span></div>
+            <div class="attendance-donut" data-attendance-chart aria-label="@Model.TotalPersonnel çalışanın @Model.PresentCount kadarı iş yerinde, @Model.LateCount kadarı geç başlamış, @Model.OnLeaveCount kadarı izinli, @Model.MissingRecordCount kadarının giriş kaydı yok">
+                <svg class="attendance-rings" viewBox="0 0 240 240" aria-label="Çalışan devam durumu renkli halkaları">
+                    <circle class="attendance-ring-track track-present" cx="120" cy="120" r="104"></circle>
+                    <circle class="attendance-ring-value ring-present" cx="120" cy="120" r="104" pathLength="100" stroke-dasharray="@(presentRate.ToString("0.##", invariant)) 100" tabindex="0" role="button" aria-label="İş yerinde: @Model.PresentCount çalışan, yüzde @presentRate" data-ring-label="İş yerinde" data-ring-count="@Model.PresentCount" data-ring-rate="%@presentRate" data-personnel-status="present"></circle>
+                    <circle class="attendance-ring-track track-late" cx="120" cy="120" r="84"></circle>
+                    <circle class="attendance-ring-value ring-late" cx="120" cy="120" r="84" pathLength="100" stroke-dasharray="@(lateRate.ToString("0.##", invariant)) 100" tabindex="0" role="button" aria-label="Geç başlayan: @Model.LateCount çalışan, yüzde @lateRate" data-ring-label="Geç başlayan" data-ring-count="@Model.LateCount" data-ring-rate="%@lateRate" data-personnel-status="late"></circle>
+                    <circle class="attendance-ring-track track-leave" cx="120" cy="120" r="64"></circle>
+                    <circle class="attendance-ring-value ring-leave" cx="120" cy="120" r="64" pathLength="100" stroke-dasharray="@(leaveRate.ToString("0.##", invariant)) 100" tabindex="0" role="button" aria-label="İzinli: @Model.OnLeaveCount çalışan, yüzde @leaveRate" data-ring-label="İzinli" data-ring-count="@Model.OnLeaveCount" data-ring-rate="%@leaveRate" data-personnel-status="leave"></circle>
+                    <circle class="attendance-ring-track track-missing" cx="120" cy="120" r="44"></circle>
+                    <circle class="attendance-ring-value ring-missing" cx="120" cy="120" r="44" pathLength="100" stroke-dasharray="@(missingRate.ToString("0.##", invariant)) 100" tabindex="0" role="button" aria-label="Kayıt yok: @Model.MissingRecordCount çalışan, yüzde @missingRate" data-ring-label="Kayıt yok" data-ring-count="@Model.MissingRecordCount" data-ring-rate="%@missingRate" data-personnel-status="missing"></circle>
+                </svg>
+                <button class="attendance-donut-center" type="button" aria-label="Toplam çalışan görünümüne dön" data-ring-reset data-default-label="Toplam çalışan" data-default-count="@Model.TotalPersonnel" data-default-rate="Bir renge dokunun">
+                    <span data-ring-center-label>Toplam çalışan</span>
+                    <strong data-ring-center-count>@Model.TotalPersonnel</strong>
+                    <small data-ring-center-rate>Bir renge dokunun</small>
+                </button>
             </div>
             <ul class="chart-legend">
                 <li><i class="legend-present"></i><span>İş yerinde</span><strong>@Model.PresentCount</strong><small>%@presentRate</small></li>
@@ -58,12 +137,36 @@
     </section>
 
     <section class="panel distribution-panel" aria-labelledby="distribution-title">
-        <div class="panel-heading"><div><p class="eyebrow">Günlük dağılım</p><h2 id="distribution-title">PDKS durum özeti</h2></div></div>
-        <div class="bar-chart" role="img" aria-label="Günlük PDKS durumlarının çubuk grafiği">
-            <div><span><i style="height:@presentRate%"></i></span><strong>@Model.PresentCount</strong><small>İş yerinde</small></div>
-            <div><span><i class="bar-warning" style="height:@lateRate%"></i></span><strong>@Model.LateCount</strong><small>Geç</small></div>
-            <div><span><i class="bar-info" style="height:@leaveRate%"></i></span><strong>@Model.OnLeaveCount</strong><small>İzinli</small></div>
-            <div><span><i class="bar-danger" style="height:@missingRate%"></i></span><strong>@Model.MissingRecordCount</strong><small>Kayıt yok</small></div>
+        <div class="panel-heading"><div><p class="eyebrow">Günlük durum dağılımı</p><h2 id="distribution-title">Son 7 çalışma günü</h2></div><small>Düne kadar</small></div>
+        <div class="daily-status-legend" aria-label="Grafik renkleri">
+            <span><i class="legend-present"></i>Zamanında</span>
+            <span><i class="legend-late"></i>Geç</span>
+            <span><i class="legend-leave"></i>İzinli</span>
+            <span><i class="legend-missing"></i>Kayıt yok</span>
+        </div>
+        <div class="bar-chart stacked-status-chart" aria-label="Son yedi çalışma gününün personel devam durumu dağılımı">
+            @foreach (var day in Model.DailyAttendance)
+            {
+                <div class="daily-stack-column">
+                    <div class="daily-stack" aria-label="@day.WorkDate.ToString("dd MMMM", culture) personel dağılımı">
+                        @foreach (var segment in new[]
+                        {
+                            (Key: "missing", Label: "Kayıt yok", Css: "stack-missing", Personnel: day.MissingRecordPersonnel),
+                            (Key: "leave", Label: "İzinli", Css: "stack-leave", Personnel: day.OnLeavePersonnel),
+                            (Key: "late", Label: "Geç başlayan", Css: "stack-late", Personnel: day.LatePersonnel),
+                            (Key: "ontime", Label: "Zamanında", Css: "stack-ontime", Personnel: day.OnTimePersonnel)
+                        })
+                        {
+                            if (segment.Personnel.Count > 0)
+                            {
+                                <button type="button" class="daily-stack-segment @segment.Css" style="--segment-count:@segment.Personnel.Count" data-personnel-status="daily-@(day.WorkDate.ToString("yyyy-MM-dd"))-@segment.Key" aria-label="@day.WorkDate.ToString("dd MMMM", culture), @segment.Label: @segment.Personnel.Count personel" title="@segment.Label: @segment.Personnel.Count personel"><span>@segment.Personnel.Count</span></button>
+                            }
+                        }
+                    </div>
+                    <strong>@day.TotalPersonnel</strong>
+                    <small>@day.WorkDate.ToString("dd MMM", culture)</small>
+                </div>
+            }
         </div>
     </section>
 </div>

@@ -7,7 +7,7 @@ namespace FaydamPDKS.Data;
 public sealed class RefreshTokenRepository(AppDbContext context) : Repository<RefreshToken>(context), IRefreshTokenRepository
 {
     public Task<RefreshToken?> GetActiveByHashAsync(string tokenHash, DateTimeOffset now, CancellationToken cancellationToken = default) =>
-        Context.RefreshTokens.Include(x => x.User).ThenInclude(x => x.Role)
+        Context.RefreshTokens.Include(x => x.User).ThenInclude(x => x.Role).Include(x => x.DeviceSession)
             .SingleOrDefaultAsync(x => x.TokenHash == tokenHash && x.RevokedAt == null && x.ExpiresAt > now, cancellationToken);
 
     public async Task RevokeAllForUserAsync(Guid userId, DateTimeOffset revokedAt, CancellationToken cancellationToken = default)

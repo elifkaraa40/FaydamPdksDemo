@@ -11,19 +11,28 @@ namespace FaydamPDKS.Api.Controllers;
 [ApiController]
 [Route("api/v1/auth")]
 [Produces("application/json")]
-public sealed class MobileAuthController(IMobileAuthService auth, EmailRegistrationService registrations) : ControllerBase
+public sealed class MobileAuthController(
+    IMobileAuthService auth,
+    EmailRegistrationService registrations) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("register")]
     [EnableRateLimiting("mobile-auth")]
     [ProducesResponseType<MobileAuthResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiErrorDto>(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Register(EmailRegistrationRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Register(
+        EmailRegistrationRequest request,
+        CancellationToken cancellationToken)
     {
-        try { return Ok(await registrations.RegisterAsync(request, cancellationToken)); }
+        try
+        {
+            return Ok(await registrations.RegisterAsync(request, cancellationToken));
+        }
         catch (InvalidOperationException ex) when (ex.Message == "EMAIL_ALREADY_REGISTERED")
         {
-            return Conflict(Error("EMAIL_ALREADY_REGISTERED", "Bu e-posta adresiyle daha önce kayıt oluşturulmuş. Giriş ekranını kullanın."));
+            return Conflict(Error(
+                "EMAIL_ALREADY_REGISTERED",
+                "Bu e-posta adresiyle daha önce kayıt oluşturulmuş. Giriş ekranını kullanın."));
         }
     }
 
@@ -32,7 +41,9 @@ public sealed class MobileAuthController(IMobileAuthService auth, EmailRegistrat
     [EnableRateLimiting("mobile-auth")]
     [ProducesResponseType<MobileAuthResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiErrorDto>(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Login(MobileLoginRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login(
+        MobileLoginRequest request,
+        CancellationToken cancellationToken)
     {
         var response = await auth.LoginAsync(request, cancellationToken);
         return response is null
@@ -43,25 +54,61 @@ public sealed class MobileAuthController(IMobileAuthService auth, EmailRegistrat
     [AllowAnonymous]
     [HttpPost("refresh")]
     [EnableRateLimiting("mobile-auth")]
-    public async Task<IActionResult> Refresh(RefreshRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Refresh(
+        RefreshRequest request,
+        CancellationToken cancellationToken)
     {
-        var response = await auth.RefreshAsync(request.RefreshToken, cancellationToken);
+        var response = await auth.RefreshAsync(
+            request.RefreshToken, request.DeviceId, cancellationToken);
         return response is null
-            ? Unauthorized(Error("INVALID_REFRESH_TOKEN", "Oturum yenilenemedi; tekrar giriş yapın."))
+            ? Unauthorized(Error(
+                "INVALID_DEVICE_SESSION",
+                "Bu cihaz oturumu artık geçerli değil. Lütfen tekrar giriş yapın."))
             : Ok(response);
     }
 
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout(RefreshRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout(
+        RefreshRequest request,
+        CancellationToken cancellationToken)
     {
-        if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var userId))
+        if (!TryGetUserId(out var userId))
             return Unauthorized(Error("UNAUTHENTICATED", "Geçerli oturum bulunamadı."));
         await auth.RevokeAsync(userId, request.RefreshToken, cancellationToken);
         return NoContent();
     }
 
-    private ApiErrorDto Error(string code, string message) => new(code, message, TraceId: HttpContext.TraceIdentifier);
+    [Authorize]
+    [HttpGet("devices")]
+    public async Task<IActionResult> Devices(CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized(Error("UNAUTHENTICATED", "Geçerli oturum bulunamadı."));
+        return Ok(await auth.GetDeviceSessionsAsync(
+            userId, GetSessionId(), cancellationToken));
+    }
+
+    [Authorize]
+    [HttpPost("logout-all")]
+    public async Task<IActionResult> LogoutAll(CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var userId))
+            return Unauthorized(Error("UNAUTHENTICATED", "Geçerli oturum bulunamadı."));
+        await auth.RevokeAllAsync(userId, cancellationToken);
+        return NoContent();
+    }
+
+    private bool TryGetUserId(out Guid userId) =>
+        Guid.TryParse(
+            User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"),
+            out userId);
+
+    private Guid? GetSessionId() =>
+        Guid.TryParse(User.FindFirstValue("sid"), out var sessionId) ? sessionId : null;
+
+    private ApiErrorDto Error(string code, string message) =>
+        new(code, message, TraceId: HttpContext.TraceIdentifier);
 }
 
-public sealed record RefreshRequest(string RefreshToken);
+public sealed record RefreshRequest(string RefreshToken, string DeviceId);

@@ -4,7 +4,10 @@ public sealed record MobileAuthResponse(
     string AccessToken,
     string RefreshToken,
     DateTimeOffset ExpiresAt,
-    MobileUserDto User);
+    MobileUserDto User,
+    Guid DeviceSessionId,
+    bool PreviousDeviceSessionRevoked = false,
+    string? DeviceSessionNotice = null);
 
 public sealed record MobileUserDto(
     Guid Id,
@@ -13,4 +16,5 @@ public sealed record MobileUserDto(
     string Role,
     string? ProfileImageUrl,
     string AccountStatus = "Active",
-    string? PhoneNumber = null);
+    string? PhoneNumber = null,
+    bool MustChangePassword = false);
