@@ -21,4 +21,11 @@
     <ProjectReference Include="..\FaydamPDKS.Data\FaydamPDKS.Data.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="SupportDocuments\Faydam-PDKS-Kullanim-ve-Yardim-Dokumani.pdf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

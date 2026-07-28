@@ -228,6 +228,23 @@ public sealed class HomeController(
 
     [Authorize]
     [HttpGet]
+    public IActionResult HelpDocument(bool download = false)
+    {
+        const string documentFileName = "Faydam-PDKS-Kullanim-ve-Yardim-Dokumani.pdf";
+        var documentPath = Path.Combine(environment.ContentRootPath, "SupportDocuments", documentFileName);
+        if (!System.IO.File.Exists(documentPath))
+        {
+            logger.LogError("Kullanım ve yardım dokümanı bulunamadı. Yol: {DocumentPath}", documentPath);
+            return NotFound();
+        }
+
+        return download
+            ? PhysicalFile(documentPath, "application/pdf", documentFileName, enableRangeProcessing: true)
+            : PhysicalFile(documentPath, "application/pdf", enableRangeProcessing: true);
+    }
+
+    [Authorize]
+    [HttpGet]
     public async Task<IActionResult> ExportMyData(CancellationToken cancellationToken)
     {
         if (!TryUserId(out var userId)) return Challenge();

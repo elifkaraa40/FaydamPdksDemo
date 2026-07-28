@@ -5,7 +5,18 @@
 <section class="help-page panel">
     <div class="help-icon" aria-hidden="true">?</div>
     <p class="eyebrow">Faydam PDKS</p>
-    <h1>Yardım dokümanı hazırlanıyor</h1>
-    <p>Proje tamamlandığında güncel kullanım kılavuzu bu alandan PDF olarak açılabilecek.</p>
-    <a class="account-secondary-button" asp-controller="Home" asp-action="Index">Genel bakışa dön</a>
+    <h1>Kullanım ve yardım dokümanı</h1>
+    <p>Yönetici paneli ve personel portalına ait güncel kullanım adımlarını PDF belgesinden inceleyebilirsiniz.</p>
+    <div class="help-actions">
+        <a class="action-button"
+           asp-controller="Home"
+           asp-action="HelpDocument"
+           target="_blank"
+           rel="noopener">PDF'yi görüntüle</a>
+        <a class="account-secondary-button"
+           asp-controller="Home"
+           asp-action="HelpDocument"
+           asp-route-download="true">PDF'yi indir</a>
+    </div>
+    <a class="help-back-link" asp-controller="Home" asp-action="Index">Genel bakışa dön</a>
 </section>
