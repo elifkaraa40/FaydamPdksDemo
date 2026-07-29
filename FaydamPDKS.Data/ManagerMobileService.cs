@@ -3,6 +3,7 @@ using FaydamPDKS.Core.Enums;
 using FaydamPDKS.Core.Interfaces;
 using FaydamPDKS.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace FaydamPDKS.Data;
 
@@ -12,7 +13,8 @@ public sealed class ManagerMobileService(
     IAuditTrail audit,
     IWorkLocationService workLocations,
     IWorkCalendarResolver workCalendar,
-    TimeProvider clock) : IManagerMobileService
+    TimeProvider clock,
+    IConfiguration? configuration = null) : IManagerMobileService
 {
     private static readonly SemaphoreSlim EmployeeNumberLock = new(1, 1);
 
@@ -33,12 +35,17 @@ public sealed class ManagerMobileService(
         var allowed = await ScopedPersonnel(scope).Select(x => x.Id).ToArrayAsync(ct);
         var report = await reports.GetAsync(today, today, cancellationToken: ct);
         var rows = report.Rows.Where(x => allowed.Contains(x.EmployeeId)).ToArray();
-        var onBreak = await db.BreakRecords.AsNoTracking().CountAsync(x => allowed.Contains(x.UserId) && x.EndedAt == null, ct);
+        var transitions = await LatestTransitionsAsync(allowed, ct);
+        var dayStart = CurrentDayBoundsUtc().Start;
+        var onBreak = await db.BreakRecords.AsNoTracking().CountAsync(
+            x => allowed.Contains(x.UserId) && x.EndedAt == null && x.StartedAt >= dayStart, ct);
         return new(
             await GetApprovalsSummaryAsync(managerId, ct),
-            rows.Count(x => x.FirstEntry.HasValue), rows.Count(x => x.LastExit.HasValue),
-            rows.Count(x => IsMissing(x.Status)),
-            rows.Count(x => x.WorkLocation == "Office"), rows.Count(x => x.WorkLocation == "Field"),
+            allowed.Length,
+            rows.Count(x => IsWorkingNow(x, transitions)),
+            transitions.Count(x => IsExit(x.Value)),
+            allowed.Count(id => IsMissingNow(rows.FirstOrDefault(x => x.EmployeeId == id))),
+            rows.Count(x => IsOfficeNow(x, transitions)), rows.Count(x => x.WorkLocation == "Field"),
             rows.Count(x => x.WorkLocation == "Remote"), onBreak);
     }
 
@@ -218,16 +225,23 @@ public sealed class ManagerMobileService(
         var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
         var report = await reports.GetAsync(today, today, cancellationToken: ct);
         var rows = report.Rows.Where(x => ids.Contains(x.EmployeeId)).ToDictionary(x => x.EmployeeId);
-        var breaks = await db.BreakRecords.AsNoTracking().Where(x => ids.Contains(x.UserId) && x.EndedAt == null).ToDictionaryAsync(x => x.UserId, ct);
+        var transitions = await LatestTransitionsAsync(ids, ct);
+        var dayStart = CurrentDayBoundsUtc().Start;
+        var breaks = await db.BreakRecords.AsNoTracking()
+            .Where(x => ids.Contains(x.UserId) && x.EndedAt == null && x.StartedAt >= dayStart)
+            .ToDictionaryAsync(x => x.UserId, ct);
         var result = personnel.Select(x =>
         {
-            rows.TryGetValue(x.Id, out var row); breaks.TryGetValue(x.Id, out var activeBreak);
+            rows.TryGetValue(x.Id, out var row);
+            breaks.TryGetValue(x.Id, out var activeBreak);
+            transitions.TryGetValue(x.Id, out var transition);
+            var location = row?.WorkLocation ?? "Office";
             return new ManagerPersonnelStatusDto(x.Id, x.EmployeeNumber, x.Name, x.Department?.Name ?? x.DepartmentLegacy,
-                x.Workplace?.Name, row?.Status ?? "NoRecord", row?.FirstEntry, row?.LastExit, row?.WorkLocation ?? "Office",
-                activeBreak is not null, activeBreak?.StartedAt, row is null || IsMissing(row.Status));
-        });
-        if (!string.IsNullOrWhiteSpace(status)) result = result.Where(x => string.Equals(x.AttendanceStatus, status, StringComparison.OrdinalIgnoreCase));
-        return Page(result.ToArray(), page, pageSize);
+                x.Workplace?.Name, row?.Status ?? "NoRecord", row?.FirstEntry, row?.LastExit, location,
+                activeBreak is not null, activeBreak?.StartedAt,
+                IsMissingNow(row), IsEntry(transition));
+        }).ToArray();
+        return Page(FilterPersonnel(result, status), page, pageSize);
     }
 
     public async Task<ManagerAttendanceReportDto> GetAttendanceReportAsync(Guid managerId, DateOnly from, DateOnly to, Guid? workplaceId, Guid? departmentId, Guid? userId, int page, int pageSize, CancellationToken ct = default)
@@ -266,7 +280,79 @@ public sealed class ManagerMobileService(
     private static IQueryable<AttendanceCorrectionRequest> ScopeRequests(IQueryable<AttendanceCorrectionRequest> query, Guid? scope) => scope.HasValue ? query.Where(x => x.User.WorkplaceId == scope) : query;
     private static IQueryable<FieldWorkRequest> ScopeRequests(IQueryable<FieldWorkRequest> query, Guid? scope) => scope.HasValue ? query.Where(x => x.User.WorkplaceId == scope) : query;
     private static void EnsureScope(Guid? scope, Guid? requested) { if (scope.HasValue && requested.HasValue && scope != requested) throw new UnauthorizedAccessException("İşyeri yetki kapsamı dışında."); }
-    private static bool IsMissing(string status) => status is "NoRecord" or "MissingEntry" or "MissingExit";
+    private async Task<Dictionary<Guid, string>> LatestTransitionsAsync(
+        IReadOnlyCollection<Guid> userIds,
+        CancellationToken ct)
+    {
+        var bounds = CurrentDayBoundsUtc();
+        var logs = await db.AccessLogs.AsNoTracking()
+            .Where(x => userIds.Contains(x.UserId)
+                && x.LogDate >= bounds.Start.UtcDateTime
+                && x.LogDate < bounds.End.UtcDateTime)
+            .OrderBy(x => x.LogDate)
+            .Select(x => new { x.UserId, x.LogType })
+            .ToArrayAsync(ct);
+        return logs.GroupBy(x => x.UserId)
+            .ToDictionary(x => x.Key, x => x.Last().LogType);
+    }
+
+    private (DateTimeOffset Start, DateTimeOffset End) CurrentDayBoundsUtc()
+    {
+        var timeZone = ResolveTimeZone(configuration?["Attendance:TimeZone"] ?? "Europe/Istanbul");
+        var localNow = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), timeZone);
+        var date = DateOnly.FromDateTime(localNow.DateTime);
+        var localStart = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+        var localEnd = date.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+        return (
+            new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localStart, timeZone)),
+            new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localEnd, timeZone)));
+    }
+
+    private static bool IsWorkingNow(
+        AttendanceReportRowDto row,
+        IReadOnlyDictionary<Guid, string> transitions) =>
+        row.WorkLocation is "Field" or "Remote"
+        || transitions.TryGetValue(row.EmployeeId, out var transition) && IsEntry(transition);
+
+    private static bool IsOfficeNow(
+        AttendanceReportRowDto row,
+        IReadOnlyDictionary<Guid, string> transitions) =>
+        row.WorkLocation == "Office"
+        && transitions.TryGetValue(row.EmployeeId, out var transition)
+        && IsEntry(transition);
+
+    private static bool IsMissingNow(AttendanceReportRowDto? row)
+    {
+        if (row?.WorkLocation is "Field" or "Remote") return false;
+        return row is null || row.Status is "NoRecord" or "MissingEntry";
+    }
+
+    private static ManagerPersonnelStatusDto[] FilterPersonnel(
+        ManagerPersonnelStatusDto[] values,
+        string? status) =>
+        status?.Trim().ToLowerInvariant() switch
+        {
+            "active" => values.Where(x => x.IsPresent || x.WorkLocation is "Field" or "Remote").ToArray(),
+            "exited" => values.Where(x => !x.IsPresent && x.LastExit.HasValue).ToArray(),
+            "missing" => values.Where(x => x.MissingRecord).ToArray(),
+            "office" => values.Where(x => x.IsPresent && x.WorkLocation == "Office").ToArray(),
+            "field" => values.Where(x => x.WorkLocation == "Field").ToArray(),
+            "remote" => values.Where(x => x.WorkLocation == "Remote").ToArray(),
+            "break" => values.Where(x => x.IsOnBreak).ToArray(),
+            _ => values
+        };
+
+    private static bool IsEntry(string? value) =>
+        string.Equals(value, "Giris", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsExit(string? value) =>
+        string.Equals(value, "Cikis", StringComparison.OrdinalIgnoreCase);
+
+    private static TimeZoneInfo ResolveTimeZone(string id)
+    {
+        try { return TimeZoneInfo.FindSystemTimeZoneById(id); }
+        catch (TimeZoneNotFoundException) { return TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"); }
+    }
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static string AppendNote(string message, string? note) => string.IsNullOrWhiteSpace(note) ? message : $"{message} Not: {note.Trim()}";
     private Notification NewNotification(Guid userId, NotificationType type, string title, string message, Guid relatedId) => new()

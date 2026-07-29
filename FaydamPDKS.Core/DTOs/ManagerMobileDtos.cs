@@ -11,7 +11,7 @@ public sealed record PagedResultDto<T>(IReadOnlyList<T> Items, int Page, int Pag
 public sealed record ManagerApprovalsSummaryDto(int Registrations, int LeaveRequests, int AttendanceCorrections, int WorkLocationRequests);
 
 public sealed record ManagerDashboardDto(
-    ManagerApprovalsSummaryDto PendingApprovals, int EnteredToday, int ExitedToday, int MissingAttendance,
+    ManagerApprovalsSummaryDto PendingApprovals, int TotalPersonnel, int EnteredToday, int ExitedToday, int MissingAttendance,
     int OfficePersonnel, int FieldPersonnel, int RemotePersonnel, int PersonnelOnBreak);
 
 public sealed record ManagerRegistrationDto(
@@ -31,6 +31,6 @@ public sealed record ReviewDecisionDto(bool Approve, [StringLength(500)] string?
 public sealed record ManagerPersonnelStatusDto(
     Guid UserId, string EmployeeNumber, string FullName, string? Department, string? Workplace,
     string AttendanceStatus, DateTimeOffset? FirstEntry, DateTimeOffset? LastExit, string WorkLocation,
-    bool IsOnBreak, DateTimeOffset? BreakStartedAt, bool MissingRecord);
+    bool IsOnBreak, DateTimeOffset? BreakStartedAt, bool MissingRecord, bool IsPresent);
 
 public sealed record ManagerAttendanceReportDto(DateOnly From, DateOnly To, PagedResultDto<AttendanceReportRowDto> Results);

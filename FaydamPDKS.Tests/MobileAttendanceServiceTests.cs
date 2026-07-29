@@ -75,6 +75,7 @@ public sealed class MobileAttendanceServiceTests
         Assert.Equal("MissingExit", summary.Status);
         Assert.NotNull(summary.FirstEntry);
         Assert.Null(summary.LastExit);
+        Assert.Equal(10, summary.LateMinutes);
         var localEntry = summary.FirstEntry!.Value.ToOffset(TimeSpan.FromHours(3));
         Assert.Equal(9, localEntry.Hour);
         Assert.Equal(15, localEntry.Minute);
