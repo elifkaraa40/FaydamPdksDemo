@@ -18,6 +18,14 @@ public sealed class AnnualLeaveService(
         CancellationToken cancellationToken = default)
     {
         var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime);
+        return await GetBalanceAsOfAsync(userId, today, cancellationToken);
+    }
+
+    private async Task<AnnualLeaveBalanceDto> GetBalanceAsOfAsync(
+        Guid userId,
+        DateOnly asOf,
+        CancellationToken cancellationToken)
+    {
         var user = await context.Users.AsNoTracking()
             .Where(x => x.Id == userId)
             .Select(x => new
@@ -51,11 +59,11 @@ public sealed class AnnualLeaveService(
 
         var hireDate = user.HireDate.Value;
         var birthDate = user.BirthDate.Value;
-        var completedYears = AnnualLeavePolicy.CompletedServiceYears(hireDate, today);
+        var completedYears = AnnualLeavePolicy.CompletedServiceYears(hireDate, asOf);
         var totalEntitlement = AnnualLeavePolicy.TotalEntitlement(
             hireDate,
             birthDate,
-            today);
+            asOf);
         var requests = await context.LeaveRequests.AsNoTracking()
             .Where(x => x.UserId == userId
                         && x.LeaveType == LeaveType.Annual
@@ -109,7 +117,9 @@ public sealed class AnnualLeaveService(
         LeaveDayPortion dayPortion,
         CancellationToken cancellationToken = default)
     {
-        var balance = await GetBalanceAsync(userId, cancellationToken);
+        // Gelecek tarihli taleplerde hak ediş, bugüne göre değil iznin
+        // başlayacağı tarihe göre değerlendirilmelidir.
+        var balance = await GetBalanceAsOfAsync(userId, startDate, cancellationToken);
         if (!balance.HireDate.HasValue || !balance.BirthDate.HasValue)
             throw new AnnualLeaveException(
                 "ANNUAL_LEAVE_PROFILE_INCOMPLETE",

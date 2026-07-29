@@ -26,13 +26,19 @@ public sealed class RegistrationsController(AppDbContext context, IAuditTrail au
     }
 
     [HttpPost]
-    public async Task<IActionResult> Approve(Guid id, string employeeNumber, Guid? departmentId, CancellationToken cancellationToken)
+    public async Task<IActionResult> Approve(
+        Guid id,
+        string employeeNumber,
+        Guid? departmentId,
+        DateOnly? hireDate,
+        CancellationToken cancellationToken)
     {
         var user = await context.Users.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (user is null) return NotFound();
-        if (!user.HireDate.HasValue || !user.BirthDate.HasValue)
+        var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime);
+        if (!hireDate.HasValue || hireDate.Value > today)
         {
-            TempData["Error"] = $"{user.Name} için işe giriş ve doğum tarihi eksik. Kaydı onaylamadan önce Personel Yönetimi ekranından bu bilgileri tamamlayın.";
+            TempData["Error"] = $"{user.Name} için geçerli bir işe giriş tarihi girin.";
             return RedirectToAction(nameof(Index));
         }
         await EmployeeNumberLock.WaitAsync(cancellationToken);
@@ -56,6 +62,7 @@ public sealed class RegistrationsController(AppDbContext context, IAuditTrail au
             user.EmployeeNumber = employeeNumber;
             user.DepartmentId = department?.Id;
             user.WorkplaceId = department?.WorkplaceId;
+            user.HireDate = hireDate.Value;
             user.AccountStatus = AccountStatus.Active;
             user.IsActive = true;
             context.Notifications.Add(NewNotification(user.Id, NotificationType.RegistrationApproved, "Hesabınız onaylandı", $"PDKS hesabınız {employeeNumber} sicil numarasıyla kullanıma açıldı."));

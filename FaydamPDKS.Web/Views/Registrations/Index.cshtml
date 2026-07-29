@@ -21,10 +21,11 @@
         {
             <tr>
                 <td><strong>@user.Name</strong><small class="d-block">@user.Email</small></td>
-                <td><span>İşe giriş: @(user.HireDate?.ToString("dd.MM.yyyy") ?? "Eksik")</span><small class="d-block">Doğum: @(user.BirthDate?.ToString("dd.MM.yyyy") ?? "Eksik")</small></td>
+                <td><span>İşe giriş tarihi yönetici onayında belirlenir.</span><small class="d-block">Doğum: @(user.BirthDate?.ToString("dd.MM.yyyy") ?? "Belirtilmedi")</small></td>
                 <td><div class="d-flex flex-wrap gap-2"><form class="d-flex flex-wrap gap-2 flex-grow-1" asp-action="Approve" method="post">
                     <input type="hidden" name="id" value="@user.Id" /><input class="form-control" style="max-width:12rem" name="employeeNumber" value="@Model.SuggestedEmployeeNumber" aria-label="Personel numarası" required maxlength="40" />
                     <select class="form-select" style="max-width:16rem" name="departmentId"><option value="">Departman seçilmedi</option>@foreach (var department in Model.Departments) { <option value="@department.Id">@department.Name</option> }</select>
+                    <input class="form-control" style="max-width:13rem" name="hireDate" type="date" aria-label="İşe giriş tarihi" title="İşe giriş tarihi" max="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                     <button class="btn btn-primary" type="submit">Onayla</button>
                 </form></div></td>
                 <td><form asp-action="Reject" method="post" onsubmit="return confirm('Bu kaydı reddetmek istiyor musunuz?');"><input type="hidden" name="id" value="@user.Id" /><button class="btn btn-outline-danger" type="submit">Reddet</button></form></td>

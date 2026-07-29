@@ -33,9 +33,15 @@ public sealed class ManagerMobileService(
         var allowed = await ScopedPersonnel(scope).Select(x => x.Id).ToArrayAsync(ct);
         var report = await reports.GetAsync(today, today, cancellationToken: ct);
         var rows = report.Rows.Where(x => allowed.Contains(x.EmployeeId)).ToArray();
-        var onBreak = await db.BreakRecords.AsNoTracking().CountAsync(x => allowed.Contains(x.UserId) && x.EndedAt == null, ct);
+        var localNow = clock.GetLocalNow();
+        var dayStart = new DateTimeOffset(
+            localNow.Year, localNow.Month, localNow.Day,
+            0, 0, 0, localNow.Offset).ToUniversalTime();
+        var onBreak = await db.BreakRecords.AsNoTracking().CountAsync(
+            x => allowed.Contains(x.UserId) && x.EndedAt == null && x.StartedAt >= dayStart, ct);
         return new(
             await GetApprovalsSummaryAsync(managerId, ct),
+            allowed.Length,
             rows.Count(x => x.FirstEntry.HasValue), rows.Count(x => x.LastExit.HasValue),
             rows.Count(x => IsMissing(x.Status)),
             rows.Count(x => x.WorkLocation == "Office"), rows.Count(x => x.WorkLocation == "Field"),
@@ -60,8 +66,9 @@ public sealed class ManagerMobileService(
         var old = new { user.AccountStatus, user.EmployeeNumber, user.DepartmentId, user.WorkplaceId, user.IsActive };
         if (request.Approve)
         {
-            if (!user.HireDate.HasValue || !user.BirthDate.HasValue)
-                throw new InvalidOperationException("İşe giriş ve doğum tarihi eksik olan mobil kayıt onaylanamaz. Bilgileri web Personel Yönetimi ekranından tamamlayın.");
+            var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
+            if (!request.HireDate.HasValue || request.HireDate.Value > today)
+                throw new InvalidOperationException("Geçerli bir işe giriş tarihi zorunludur.");
 
             await EmployeeNumberLock.WaitAsync(ct);
             try
@@ -81,6 +88,7 @@ public sealed class ManagerMobileService(
                 user.EmployeeNumber = number;
                 user.DepartmentId = department?.Id;
                 user.WorkplaceId = department?.WorkplaceId ?? scope;
+                user.HireDate = request.HireDate.Value;
                 user.AccountStatus = AccountStatus.Active;
                 user.IsActive = true;
             }
@@ -221,7 +229,13 @@ public sealed class ManagerMobileService(
         var today = DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
         var report = await reports.GetAsync(today, today, cancellationToken: ct);
         var rows = report.Rows.Where(x => ids.Contains(x.EmployeeId)).ToDictionary(x => x.EmployeeId);
-        var breaks = await db.BreakRecords.AsNoTracking().Where(x => ids.Contains(x.UserId) && x.EndedAt == null).ToDictionaryAsync(x => x.UserId, ct);
+        var localNow = clock.GetLocalNow();
+        var dayStart = new DateTimeOffset(
+            localNow.Year, localNow.Month, localNow.Day,
+            0, 0, 0, localNow.Offset).ToUniversalTime();
+        var breaks = await db.BreakRecords.AsNoTracking()
+            .Where(x => ids.Contains(x.UserId) && x.EndedAt == null && x.StartedAt >= dayStart)
+            .ToDictionaryAsync(x => x.UserId, ct);
         var result = personnel.Select(x =>
         {
             rows.TryGetValue(x.Id, out var row); breaks.TryGetValue(x.Id, out var activeBreak);
@@ -229,8 +243,7 @@ public sealed class ManagerMobileService(
                 x.Workplace?.Name, row?.Status ?? "NoRecord", row?.FirstEntry, row?.LastExit, row?.WorkLocation ?? "Office",
                 activeBreak is not null, activeBreak?.StartedAt, row is null || IsMissing(row.Status));
         });
-        if (!string.IsNullOrWhiteSpace(status)) result = result.Where(x => string.Equals(x.AttendanceStatus, status, StringComparison.OrdinalIgnoreCase));
-        return Page(result.ToArray(), page, pageSize);
+        return Page(FilterPersonnel(result.ToArray(), status), page, pageSize);
     }
 
     public async Task<ManagerAttendanceReportDto> GetAttendanceReportAsync(Guid managerId, DateOnly from, DateOnly to, Guid? workplaceId, Guid? departmentId, Guid? userId, int page, int pageSize, CancellationToken ct = default)
@@ -270,6 +283,21 @@ public sealed class ManagerMobileService(
     private static IQueryable<FieldWorkRequest> ScopeRequests(IQueryable<FieldWorkRequest> query, Guid? scope) => scope.HasValue ? query.Where(x => x.User.WorkplaceId == scope) : query;
     private static void EnsureScope(Guid? scope, Guid? requested) { if (scope.HasValue && requested.HasValue && scope != requested) throw new UnauthorizedAccessException("İşyeri yetki kapsamı dışında."); }
     private static bool IsMissing(string status) => status is "NoRecord" or "MissingEntry" or "MissingExit";
+    private static ManagerPersonnelStatusDto[] FilterPersonnel(
+        ManagerPersonnelStatusDto[] values,
+        string? status) =>
+        status?.Trim().ToLowerInvariant() switch
+        {
+            "entered" => values.Where(x => x.FirstEntry.HasValue).ToArray(),
+            "active" => values.Where(x => x.FirstEntry.HasValue && !x.LastExit.HasValue).ToArray(),
+            "exited" => values.Where(x => x.LastExit.HasValue).ToArray(),
+            "missing" => values.Where(x => x.MissingRecord).ToArray(),
+            "office" => values.Where(x => x.WorkLocation == "Office").ToArray(),
+            "field" => values.Where(x => x.WorkLocation == "Field").ToArray(),
+            "remote" => values.Where(x => x.WorkLocation == "Remote").ToArray(),
+            "break" => values.Where(x => x.IsOnBreak).ToArray(),
+            _ => values
+        };
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static string AppendNote(string message, string? note) => string.IsNullOrWhiteSpace(note) ? message : $"{message} Not: {note.Trim()}";
     private Notification NewNotification(Guid userId, NotificationType type, string title, string message, Guid relatedId) => new()

@@ -11,7 +11,7 @@ public sealed record PagedResultDto<T>(IReadOnlyList<T> Items, int Page, int Pag
 public sealed record ManagerApprovalsSummaryDto(int Registrations, int LeaveRequests, int AttendanceCorrections, int WorkLocationRequests);
 
 public sealed record ManagerDashboardDto(
-    ManagerApprovalsSummaryDto PendingApprovals, int EnteredToday, int ExitedToday, int MissingAttendance,
+    ManagerApprovalsSummaryDto PendingApprovals, int TotalPersonnel, int EnteredToday, int ExitedToday, int MissingAttendance,
     int OfficePersonnel, int FieldPersonnel, int RemotePersonnel, int PersonnelOnBreak);
 
 public sealed record ManagerRegistrationDto(
@@ -24,6 +24,7 @@ public sealed class ReviewRegistrationDto
     [StringLength(500)] public string? Note { get; set; }
     [StringLength(40)] public string? EmployeeNumber { get; set; }
     public Guid? DepartmentId { get; set; }
+    public DateOnly? HireDate { get; set; }
 }
 
 public sealed record ReviewDecisionDto(bool Approve, [StringLength(500)] string? Note);

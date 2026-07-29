@@ -8,12 +8,10 @@ using Microsoft.EntityFrameworkCore;
 namespace FaydamPDKS.Api;
 
 public sealed class EmailRegistrationService(AppDbContext context, MobileTokenService tokens,
-    IManagerNotificationService managerNotifications,
-    TimeProvider timeProvider)
+    IManagerNotificationService managerNotifications)
 {
     public async Task<MobileAuthResponse> RegisterAsync(EmailRegistrationRequest request, CancellationToken cancellationToken)
     {
-        ValidateEmploymentDates(request.HireDate, request.BirthDate);
         var email = request.Email.Trim().ToLowerInvariant();
         if (await context.Users.AnyAsync(x => x.Email.ToLower() == email, cancellationToken))
             throw new InvalidOperationException("EMAIL_ALREADY_REGISTERED");
@@ -29,8 +27,6 @@ public sealed class EmailRegistrationService(AppDbContext context, MobileTokenSe
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             RoleId = role.Id,
             Role = role,
-            HireDate = request.HireDate,
-            BirthDate = request.BirthDate,
             IsActive = true,
             AccountStatus = AccountStatus.PendingApproval
         };
@@ -39,19 +35,5 @@ public sealed class EmailRegistrationService(AppDbContext context, MobileTokenSe
         await managerNotifications.NotifyAsync(NotificationType.RegistrationApprovalRequested, "Yeni kullanıcı onayı",
             $"{user.Name} ({user.Email}) mobil kayıt onayı bekliyor.", user.Id, cancellationToken);
         return await tokens.IssueForUserAsync(user, request.DeviceId, request.DeviceName, cancellationToken);
-    }
-
-    private void ValidateEmploymentDates(DateOnly? hireDate, DateOnly? birthDate)
-    {
-        if (!hireDate.HasValue)
-            throw new InvalidOperationException("HIRE_DATE_REQUIRED");
-        if (!birthDate.HasValue)
-            throw new InvalidOperationException("BIRTH_DATE_REQUIRED");
-
-        var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime);
-        if (hireDate.Value > today)
-            throw new InvalidOperationException("HIRE_DATE_CANNOT_BE_FUTURE");
-        if (birthDate.Value >= hireDate.Value)
-            throw new InvalidOperationException("BIRTH_DATE_MUST_BE_BEFORE_HIRE_DATE");
     }
 }

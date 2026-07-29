@@ -23,8 +23,8 @@ public sealed class AnnualLeaveServiceTests
         var error = await Assert.ThrowsAsync<AnnualLeaveException>(() =>
             service.EnsureCanRequestAsync(
                 user.Id,
-                new DateOnly(2026, 7, 20),
-                new DateOnly(2026, 7, 24),
+                new DateOnly(2026, 7, 14),
+                new DateOnly(2026, 7, 14),
                 LeaveDayPortion.FullDay));
 
         Assert.False(balance.IsEligible);
@@ -32,6 +32,25 @@ public sealed class AnnualLeaveServiceTests
         Assert.Equal(new DateOnly(2026, 7, 15), balance.FirstEntitlementDate);
         Assert.Equal("ANNUAL_LEAVE_NOT_EARNED", error.Code);
         Assert.Contains("15.07.2026", error.Message);
+    }
+
+    [Fact]
+    public async Task Employee_can_request_future_annual_leave_starting_on_first_anniversary()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var user = await SeedUserAsync(
+            context,
+            new DateOnly(2026, 7, 1),
+            new DateOnly(1995, 1, 1));
+        var service = CreateService(context, new DateOnly(2026, 7, 29));
+
+        var requestedDays = await service.EnsureCanRequestAsync(
+            user.Id,
+            new DateOnly(2027, 7, 1),
+            new DateOnly(2027, 7, 2),
+            LeaveDayPortion.FullDay);
+
+        Assert.Equal(2, requestedDays);
     }
 
     [Fact]

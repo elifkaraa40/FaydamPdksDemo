@@ -21,7 +21,7 @@ public sealed class ManagerMobileServiceTests
             RoleId = managerRole.Id, Role = managerRole, AccountStatus = AccountStatus.Active, IsActive = true };
         var personnel = new User { Id = Guid.NewGuid(), Name = "Yeni Personel", Email = "personnel@test.local", EmployeeNumber = string.Empty,
             RoleId = personnelRole.Id, Role = personnelRole, AccountStatus = AccountStatus.PendingApproval, IsActive = true,
-            HireDate = new DateOnly(2020, 1, 1), BirthDate = new DateOnly(1990, 1, 1) };
+            BirthDate = new DateOnly(1990, 1, 1) };
         db.AddRange(managerRole, personnelRole, manager, personnel);
         await db.SaveChangesAsync();
 
@@ -36,7 +36,7 @@ public sealed class ManagerMobileServiceTests
             workLocations, new WorkCalendarResolver(db), clock);
 
         Assert.True(await service.ReviewRegistrationAsync(personnel.Id, manager.Id,
-            new ReviewRegistrationDto { Approve = true }, "test-correlation"));
+            new ReviewRegistrationDto { Approve = true, HireDate = new DateOnly(2020, 1, 1) }, "test-correlation"));
         var saved = await db.Users.FindAsync(personnel.Id);
         Assert.Equal(AccountStatus.Active, saved!.AccountStatus);
         Assert.StartsWith("PER-", saved.EmployeeNumber);
