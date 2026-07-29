@@ -33,6 +33,17 @@ public sealed class MobileLeaveRequestsController(ILeaveRequestService leaveRequ
         {
             return BadRequest(Error("INVALID_LEAVE_REQUEST", ex.Message));
         }
+        catch (AnnualLeaveNotEligibleException ex)
+        {
+            return Conflict(new ApiErrorDto(
+                "ANNUAL_LEAVE_NOT_ELIGIBLE",
+                $"Seçtiğiniz izin başlangıç tarihinde yıllık izin hakkınız henüz başlamamış olacak. Yıllık izin kullanabilmek için işe giriş tarihinizden itibaren 1 yılı tamamlamanız gerekir. Hak kazanma tarihiniz: {ex.EligibleOn:dd.MM.yyyy}.",
+                new Dictionary<string, string[]>
+                {
+                    ["eligibleOn"] = [ex.EligibleOn.ToString("yyyy-MM-dd")]
+                },
+                HttpContext.TraceIdentifier));
+        }
         catch (LeaveOverlapException ex)
         {
             return Conflict(new ApiErrorDto(

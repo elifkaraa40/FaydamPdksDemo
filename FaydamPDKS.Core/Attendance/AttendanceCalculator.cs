@@ -36,12 +36,12 @@ public sealed class AttendanceCalculator
             return Empty(workDate, isWorkingDay ? AttendanceStatus.NoRecord : AttendanceStatus.NonWorkingDay, expected);
         if (firstEntry is null)
             return new(workDate, AttendanceStatus.MissingEntry, null, lastExit, 0, expected, 0, 0, 0);
+        var late = isWorkingDay ? Math.Max(0, (int)(firstEntry.Value - shiftStart).TotalMinutes - shift.LateToleranceMinutes) : 0;
         if (lastExit is null || lastExit <= firstEntry)
-            return new(workDate, AttendanceStatus.MissingExit, firstEntry, lastExit, 0, expected, 0, 0, 0);
+            return new(workDate, AttendanceStatus.MissingExit, firstEntry, lastExit, 0, expected, late, 0, 0);
 
         var deductedBreak = shift.BreakMinutes + Math.Max(0, actualBreakMinutes ?? 0);
         var worked = Math.Max(0, (int)(lastExit.Value - firstEntry.Value).TotalMinutes - deductedBreak);
-        var late = isWorkingDay ? Math.Max(0, (int)(firstEntry.Value - shiftStart).TotalMinutes - shift.LateToleranceMinutes) : 0;
         var early = isWorkingDay ? Math.Max(0, (int)(shiftEnd - lastExit.Value).TotalMinutes - shift.EarlyLeaveToleranceMinutes) : 0;
         var overtime = Math.Max(0, worked - expected);
 

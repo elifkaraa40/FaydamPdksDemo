@@ -147,7 +147,7 @@ public sealed class MobileAttendanceService(
     private Task<int?> GetBreakMinutesAsync(Guid employeeId, DateOnly date, TimeZoneInfo timeZone, CancellationToken cancellationToken)
     {
         var localStart = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-        var localEnd = date.AddDays(2).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+        var localEnd = date.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
         return breaks.GetCompletedMinutesAsync(employeeId,
             new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localStart, timeZone)),
             new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localEnd, timeZone)), cancellationToken);

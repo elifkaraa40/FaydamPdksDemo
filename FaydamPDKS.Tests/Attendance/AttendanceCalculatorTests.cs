@@ -64,6 +64,25 @@ public sealed class AttendanceCalculatorTests
     }
 
     [Fact]
+    public void Calculates_lateness_before_employee_checks_out()
+    {
+        var date = new DateOnly(2026, 7, 28);
+        var shift = new ShiftDefinition(
+            new TimeOnly(9, 0),
+            new TimeOnly(18, 0),
+            lateToleranceMinutes: 5);
+
+        var result = _calculator.Calculate(
+            date,
+            shift,
+            new[] { Event(date, 15, 46, AttendanceEventType.Entry) },
+            Istanbul);
+
+        Assert.Equal(AttendanceStatus.MissingExit, result.Status);
+        Assert.Equal(401, result.LateMinutes);
+    }
+
+    [Fact]
     public void Non_working_day_without_events_has_zero_expected_minutes()
     {
         var date = new DateOnly(2026, 7, 19);

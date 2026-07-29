@@ -116,6 +116,45 @@ public sealed class MobileLeaveRequestServiceTests
     }
 
     [Fact]
+    public async Task Annual_leave_requires_one_completed_year_and_returns_specific_error()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var userId = await SeedUserAsync(context, new DateOnly(2026, 1, 15));
+        var service = CreateService(context);
+        var controller = CreateController(service, userId);
+
+        var result = await controller.Create(new CreateLeaveRequestDto(
+            LeaveType.Annual,
+            new DateOnly(2026, 7, 20),
+            new DateOnly(2026, 7, 20),
+            "Yıllık izin"), CancellationToken.None);
+
+        var conflict = Assert.IsType<ConflictObjectResult>(result);
+        var error = Assert.IsType<ApiErrorDto>(conflict.Value);
+        Assert.Equal("ANNUAL_LEAVE_NOT_ELIGIBLE", error.Code);
+        Assert.Equal("2027-01-15", error.Errors!["eligibleOn"].Single());
+        Assert.Empty(context.LeaveRequests);
+    }
+
+    [Fact]
+    public async Task Annual_leave_can_be_requested_now_for_a_date_on_or_after_first_anniversary()
+    {
+        await using var context = TestInfrastructure.CreateContext();
+        var userId = await SeedUserAsync(context, new DateOnly(2026, 1, 15));
+        var service = CreateService(context);
+
+        var created = await service.CreateAsync(userId, new CreateLeaveRequestDto(
+            LeaveType.Annual,
+            new DateOnly(2027, 1, 15),
+            new DateOnly(2027, 1, 18),
+            "Birinci yıl sonrası yıllık izin"));
+
+        Assert.Equal(LeaveRequestStatus.Pending, created.Status);
+        Assert.Equal(new DateOnly(2027, 1, 15), created.StartDate);
+        Assert.Single(context.LeaveRequests);
+    }
+
+    [Fact]
     public async Task Counts_friday_to_monday_as_two_workdays_and_supports_half_day()
     {
         await using var context = TestInfrastructure.CreateContext();
@@ -141,15 +180,43 @@ public sealed class MobileLeaveRequestServiceTests
             ["Attendance:TimeZone"] = "Europe/Istanbul"
         }).Build();
         return new MobileLeaveRequestService(
-            new LeaveRequestRepository(context), new UnitOfWork(context),
+            new LeaveRequestRepository(context), new UserRepository(context),
+            new UnitOfWork(context),
             new WorkCalendarResolver(context),
             new TestTimeProvider(new DateTimeOffset(2026, 7, 14, 8, 0, 0, TimeSpan.Zero)), config);
     }
 
-    private static async Task<Guid> SeedUserAsync(AppDbContext context)
+    private static MobileLeaveRequestsController CreateController(
+        MobileLeaveRequestService service,
+        Guid userId) =>
+        new(service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [
+                        new Claim("sub", userId.ToString())
+                    ], "test"))
+                }
+            }
+        };
+
+    private static async Task<Guid> SeedUserAsync(
+        AppDbContext context,
+        DateOnly? hireDate = null)
     {
         var role = new Role { Id = Guid.NewGuid(), Name = "Personel", NormalizedName = "PERSONEL" };
-        var user = new User { Id = Guid.NewGuid(), Name = "Test", Email = "test@faydam.com", RoleId = role.Id, Role = role };
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test",
+            Email = "test@faydam.com",
+            RoleId = role.Id,
+            Role = role,
+            HireDate = hireDate
+        };
         context.AddRange(role, user);
         await context.SaveChangesAsync();
         return user.Id;

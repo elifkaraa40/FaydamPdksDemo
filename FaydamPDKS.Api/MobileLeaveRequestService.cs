@@ -8,6 +8,7 @@ namespace FaydamPDKS.Api;
 
 public sealed class MobileLeaveRequestService(
     ILeaveRequestRepository leaveRequests,
+    IUserRepository users,
     IUnitOfWork unitOfWork,
     IWorkCalendarResolver workCalendar,
     TimeProvider timeProvider,
@@ -34,6 +35,16 @@ public sealed class MobileLeaveRequestService(
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), timeZone).DateTime);
         if (request.StartDate < today)
             throw new ArgumentException("Geçmiş tarihli izin talebi oluşturulamaz.");
+        if (request.LeaveType == LeaveType.Annual)
+        {
+            var user = await users.GetByIdWithRoleAsync(userId, false, cancellationToken);
+            if (user?.HireDate is { } hireDate)
+            {
+                var eligibleOn = hireDate.AddYears(1);
+                if (request.StartDate < eligibleOn)
+                    throw new AnnualLeaveNotEligibleException(eligibleOn);
+            }
+        }
         var overlap = await leaveRequests.FindActiveOverlapAsync(
             userId, request.StartDate, request.EndDate, cancellationToken);
         if (overlap is not null)
